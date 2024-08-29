@@ -1,10 +1,7 @@
 let tg = window.Telegram.WebApp;
-
 tg.expand();
-
 tg.MainButton.textColor = '#FFFFFF';
 tg.MainButton.color = '#2cab37';
-
 let item = "";
 
 let btn1 = document.getElementById("btn1");
@@ -14,110 +11,31 @@ let btn4 = document.getElementById("btn4");
 let btn5 = document.getElementById("btn5");
 let btn6 = document.getElementById("btn6");
 
-btn1.addEventListener("click", function(){
-	if (tg.MainButton.isVisible) {
-		tg.MainButton.hide();
-	}
-	else {
-		tg.MainButton.setText("Вы выбрали товар 1!");
-		item = "1";
-		tg.MainButton.show();
-	}
-});
-
-btn2.addEventListener("click", function(){
-	if (tg.MainButton.isVisible) {
-		tg.MainButton.hide();
-	}
-	else {
-		tg.MainButton.setText("Вы выбрали товар 2!");
-		item = "2";
-		tg.MainButton.show();
-	}
-});
-
-btn3.addEventListener("click", function(){
-	if (tg.MainButton.isVisible) {
-		tg.MainButton.hide();
-	}
-	else {
-		tg.MainButton.setText("Вы выбрали товар 3!");
-		item = "3";
-		tg.MainButton.show();
-	}
-});
-
-btn4.addEventListener("click", function(){
-	if (tg.MainButton.isVisible) {
-		tg.MainButton.hide();
-	}
-	else {
-		tg.MainButton.setText("Вы выбрали товар 4!");
-		item = "4";
-		tg.MainButton.show();
-	}
-});
-
-btn5.addEventListener("click", function(){
-	if (tg.MainButton.isVisible) {
-		tg.MainButton.hide();
-	}
-	else {
-		tg.MainButton.setText("Вы выбрали товар 5!");
-		item = "5";
-		tg.MainButton.show();
-	}
-});
-
-btn6.addEventListener("click", function(){
-	if (tg.MainButton.isVisible) {
-		tg.MainButton.hide();
-	}
-	else {
-		tg.MainButton.setText("Вы выбрали товар 6!");
-		item = "6";
-		tg.MainButton.show();
-	}
-});
-
-
-Telegram.WebApp.onEvent("mainButtonClicked", function(){
-	tg.sendData(item);
-});
-
-
-let usercard = document.getElementById("usercard");
-
-let p = document.createElement("p");
-
-p.innerText = `${tg.initDataUnsafe.user.first_name}
-${tg.initDataUnsafe.user.last_name}`;
-
-usercard.appendChild(p);
-
-// Функция для получения цен с сервера
-function getPrices() {
-    fetch('https://your-api-url/prices')
-        .then(response => response.json())
-        .then(data => {
-            // Обновите DOM с полученными ценами
-            for (let key in data) {
-                let priceElement = document.getElementById(`price-${key}`);
-                if (priceElement) {
-                    priceElement.textContent = `${data[key][0].amount / 100} руб.`;
-                }
-            }
-        })
-        .catch(error => console.error('Error:', error));
+function setupButton(btn, itemNumber) {
+    btn.addEventListener("click", function(){
+        if (tg.MainButton.isVisible) {
+            tg.MainButton.hide();
+        } else {
+            tg.MainButton.setText(`Вы выбрали товар ${itemNumber}!`);
+            item = itemNumber;
+            tg.MainButton.show();
+        }
+    });
 }
 
-// Вызовите функцию getPrices при загрузке страницы
-getPrices();
+setupButton(btn1, "1");
+setupButton(btn2, "2");
+setupButton(btn3, "3");
+setupButton(btn4, "4");
+setupButton(btn5, "5");
+setupButton(btn6, "6");
 
+Telegram.WebApp.onEvent("mainButtonClicked", function(){
+    tg.sendData(item);
+});
 
-
-
-
-
-
-
+let usercard = document.getElementById("usercard");
+let p = document.createElement("p");
+p.innerText = `${tg.initDataUnsafe.user.first_name}
+${tg.initDataUnsafe.user.last_name}`;
+usercard.appendChild(p);
