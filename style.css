@@ -6,6 +6,10 @@ body {
 	background: var(--tg-theme-bg-color);
 }
 
+.h1 {
+       margin-bottom: 20px; 
+}
+
 .container {
 	max-width: 390px;
 }
