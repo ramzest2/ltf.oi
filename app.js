@@ -95,6 +95,25 @@ ${tg.initDataUnsafe.user.last_name}`;
 
 usercard.appendChild(p);
 
+// Функция для получения цен с сервера
+function getPrices() {
+    fetch('https://your-api-url/prices')
+        .then(response => response.json())
+        .then(data => {
+            // Обновите DOM с полученными ценами
+            for (let key in data) {
+                let priceElement = document.getElementById(`price-${key}`);
+                if (priceElement) {
+                    priceElement.textContent = `${data[key][0].amount / 100} руб.`;
+                }
+            }
+        })
+        .catch(error => console.error('Error:', error));
+}
+
+// Вызовите функцию getPrices при загрузке страницы
+getPrices();
+
 
 
 
