@@ -6,9 +6,6 @@ body {
 	background: var(--tg-theme-bg-color);
 }
 
-.h1 {
-       margin-bottom: 30px; 
-}
 
 .container {
 	max-width: 390px;
@@ -18,12 +15,10 @@ body {
 	display: grid;
 	grid-template-columns: 1fr 1fr;
 	grid-template-rows: 200px 200px 200px;
-	grid-gap: 50px;
 }
 
 .img {
 	width: 150px;
-	margin-bottom: 25px;
 }
 
 .item {
@@ -33,7 +28,7 @@ body {
 
 .btn {
 	display: inline-block;
-	padding: 10px 10px;
+	padding: 10px 20px;
 	border: none;
 	background: rgb(248, 168, 24);
 	border-radius: 10px;
@@ -50,6 +45,12 @@ body {
 
 .usercard {
 	text-align: center;
+}
+/* Новые стили для цен */
+.price {
+    font-weight: bold;
+    color: var(--tg-theme-hint-color);
+    margin: 10px 0;
 }
 
 
