@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Меню Mini App</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: var(--tg-theme-bg-color, #ffffff);
+            color: var(--tg-theme-text-color, #000000);
+        }
+        .menu {
+            background-color: var(--tg-theme-secondary-bg-color, #f1f1f1);
+            padding: 10px;
+        }
+        .menu ul {
+            list-style-type: none;
+            padding: 0;
+        }
+        .menu li {
+            display: block;
+            margin-bottom: 10px;
+        }
+        .menu a {
+            text-decoration: none;
+            color: var(--tg-theme-link-color, #333);
+            display: block;
+            padding: 10px;
+            border-radius: 5px;
+            background-color: var(--tg-theme-button-color, #e0e0e0);
+        }
+        h1, p {
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <nav class="menu">
+        <ul>
+            <li><a href="#home" onclick="sendData('home')">Главная</a></li>
+            <li><a href="#about" onclick="sendData('about')">О нас</a></li>
+            <li><a href="#services" onclick="sendData('services')">Услуги</a></li>
+            <li><a href="#contact" onclick="sendData('contact')">Контакты</a></li>
+        </ul>
+    </nav>
+    <h1>Добро пожаловать в наше Mini App меню!</h1>
+    <p>Выберите пункт меню выше, чтобы перейти к нужному разделу.</p>
+
+    <script>
+        let tg = window.Telegram.WebApp;
+        tg.expand();
+
+        function sendData(section) {
+            tg.sendData(section);
+        }
+
+        tg.onEvent('mainButtonClicked', function(){
+            tg.sendData("Главное меню");
+        });
+
+        tg.MainButton.setText("Главное меню").show();
+    </script>
+</body>
+</html>
