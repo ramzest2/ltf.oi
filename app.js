@@ -1,104 +1,46 @@
 let tg = window.Telegram.WebApp;
-
 tg.expand();
 
 tg.MainButton.textColor = '#FFFFFF';
 tg.MainButton.color = '#2cab37';
 
-let item = "";
+let cart = {};
 
-let btn1 = document.getElementById("btn1");
-let btn2 = document.getElementById("btn2");
-let btn3 = document.getElementById("btn3");
-let btn4 = document.getElementById("btn4");
-let btn5 = document.getElementById("btn5");
-let btn6 = document.getElementById("btn6");
+function updateMainButton() {
+    let total = Object.values(cart).reduce((sum, item) => sum + item.price * item.quantity, 0);
+    if (total > 0) {
+        tg.MainButton.setText(`Заказать (${total / 1000}k руб.)`);
+        tg.MainButton.show();
+    } else {
+        tg.MainButton.hide();
+    }
+}
 
-btn1.addEventListener("click", function(){
-	if (tg.MainButton.isVisible) {
-		tg.MainButton.hide();
-	}
-	else {
-		tg.MainButton.setText("Вы выбрали товар 1!");
-		item = "1";
-		tg.MainButton.show();
-	}
+function addToCart(id, name, price) {
+    if (cart[id]) {
+        cart[id].quantity++;
+    } else {
+        cart[id] = { name, price, quantity: 1 };
+    }
+    updateMainButton();
+}
+
+document.querySelectorAll('.btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+        let id = this.id.replace('btn', '');
+        let name = this.parentElement.querySelector('h3').textContent;
+        let price = parseInt(this.parentElement.querySelector('.price').textContent.replace(/[^0-9]/g, ''));
+        addToCart(id, name, price);
+    });
 });
 
-btn2.addEventListener("click", function(){
-	if (tg.MainButton.isVisible) {
-		tg.MainButton.hide();
-	}
-	else {
-		tg.MainButton.setText("Вы выбрали товар 2!");
-		item = "2";
-		tg.MainButton.show();
-	}
+tg.MainButton.onClick(function() {
+    let order = Object.values(cart).map(item => `${item.name} x${item.quantity}`).join(', ');
+    tg.sendData(JSON.stringify({ order: order, total: Object.values(cart).reduce((sum, item) => sum + item.price * item.quantity, 0) }));
 });
 
-btn3.addEventListener("click", function(){
-	if (tg.MainButton.isVisible) {
-		tg.MainButton.hide();
-	}
-	else {
-		tg.MainButton.setText("Вы выбрали товар 3!");
-		item = "3";
-		tg.MainButton.show();
-	}
-});
-
-btn4.addEventListener("click", function(){
-	if (tg.MainButton.isVisible) {
-		tg.MainButton.hide();
-	}
-	else {
-		tg.MainButton.setText("Вы выбрали товар 4!");
-		item = "4";
-		tg.MainButton.show();
-	}
-});
-
-btn5.addEventListener("click", function(){
-	if (tg.MainButton.isVisible) {
-		tg.MainButton.hide();
-	}
-	else {
-		tg.MainButton.setText("Вы выбрали товар 5!");
-		item = "5";
-		tg.MainButton.show();
-	}
-});
-
-btn6.addEventListener("click", function(){
-	if (tg.MainButton.isVisible) {
-		tg.MainButton.hide();
-	}
-	else {
-		tg.MainButton.setText("Вы выбрали товар 6!");
-		item = "6";
-		tg.MainButton.show();
-	}
-});
-
-
-Telegram.WebApp.onEvent("mainButtonClicked", function(){
-	tg.sendData(item);
-});
-
-
+// Отображение имени пользователя
 let usercard = document.getElementById("usercard");
-
 let p = document.createElement("p");
-
-p.innerText = `${tg.initDataUnsafe.user.first_name}
-${tg.initDataUnsafe.user.last_name}`;
-
+p.innerText = `${tg.initDataUnsafe.user.first_name} ${tg.initDataUnsafe.user.last_name}`;
 usercard.appendChild(p);
-
-
-
-
-
-
-
-
