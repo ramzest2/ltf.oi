@@ -52,8 +52,6 @@ function addToCart(id, name, price) {
     } else {
         cart[id] = { name, price, quantity: 1 };
     }
-    console.log('Added to cart:', id, name, price);
-    console.log('Current cart:', cart);
     updateCartDisplay();
     updateMainButton();
 }
@@ -130,9 +128,9 @@ tg.MainButton.onClick(function() {
     let order = Object.values(cart).map(item => ({
         name: item.name,
         quantity: item.quantity,
-        price: item.price || 0
+        price: item.price // Цена в рупиях
     }));
-    let total = Object.values(cart).reduce((sum, item) => sum + (item.price || 0) * item.quantity, 0);
+    let total = Object.values(cart).reduce((sum, item) => sum + item.price * item.quantity, 0);
     
     let orderData = {
         order: order,
