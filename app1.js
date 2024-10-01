@@ -10,8 +10,7 @@ let cart = {};
 function updateMainButton() {
     let total = Object.values(cart).reduce((sum, item) => sum + item.price * item.quantity, 0);
     if (total > 0) {
-        let formattedTotal = (total / 1000).toFixed(0); // Округляем до целого числа тысяч
-        tg.MainButton.setText(`Заказать (${formattedTotal}k рупий)`);
+        tg.MainButton.setText(`Заказать (${formatPrice(total)})`);
         tg.MainButton.show();
     } else {
         tg.MainButton.hide();
@@ -110,11 +109,11 @@ function removeFromCart(id) {
     updateMainButton();
 }
 
-document.getElementById('clear-cart').addEventListener('click', function() {
-    cart = {};
-    updateCartDisplay();
-    updateMainButton();
-});
+// document.getElementById('clear-cart').addEventListener('click', function() {
+    // cart = {};
+    // updateCartDisplay();
+    // updateMainButton();
+// });
 
 tg.MainButton.onClick(function() {
     let order = Object.values(cart).map(item => ({
@@ -147,7 +146,13 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function formatPrice(price) {
-    return `${(price / 1000).toFixed(0)}k рупий`;
+    if (price >= 1000000) {
+        return `${(price / 1000000).toFixed(0)}M рупий`;
+    } else if (price >= 1000) {
+        return `${(price / 1000).toFixed(0)}k рупий`;
+    } else {
+        return `${price} рупий`;
+    }
 }
 
 
