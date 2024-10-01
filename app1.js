@@ -50,7 +50,7 @@ function addToCart(id, name, price) {
     if (cart[id]) {
         cart[id].quantity++;
     } else {
-        cart[id] = { name, price, quantity: 1 };
+        cart[id] = { name, price: price * 1000, quantity: 1 }; // Умножаем на 1000, так как цены указаны в тысячах
     }
     updateCartDisplay();
     updateMainButton();
@@ -146,11 +146,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function formatPrice(price) {
-    if (price >= 1000) {
-        return `${(price / 1000).toFixed(0)}k рупий`;
-    } else {
-        return `${price} рупий`;
-    }
+    return `${(price / 1000).toFixed(0)}k рупий`;
 }
 
 
