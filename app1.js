@@ -113,7 +113,7 @@ function removeFromCart(id) {
     // cart = {};
     // updateCartDisplay();
     // updateMainButton();
-// 
+// });
 
 tg.MainButton.onClick(function() {
     let order = Object.values(cart).map(item => ({
@@ -146,13 +146,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function formatPrice(price) {
-    if (price >= 1000000) {
-        return `${(price / 1000000).toFixed(0)}M рупий`;
-    } else if (price >= 1000) {
-        return `${(price / 1000).toFixed(0)}k рупий`;
-    } else {
-        return `${price} рупий`;
-    }
+    return `${(price / 1000).toFixed(0)}k рупий`;
 }
 
 
