@@ -113,7 +113,7 @@ function removeFromCart(id) {
     // cart = {};
     // updateCartDisplay();
     // updateMainButton();
-// });
+// 
 
 tg.MainButton.onClick(function() {
     let order = Object.values(cart).map(item => ({
