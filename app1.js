@@ -117,14 +117,6 @@ document.getElementById('clear-cart').addEventListener('click', function() {
 });
 
 tg.MainButton.onClick(function() {
-    console.log('MainButton clicked');
-    console.log('Current cart:', cart);
-    if (Object.keys(cart).length === 0) {
-        console.log('Cart is empty');
-        alert('Ваша корзина пуста. Добавьте товары перед заказом.');
-        return;
-    }
-
     let order = Object.values(cart).map(item => ({
         name: item.name,
         quantity: item.quantity,
@@ -132,24 +124,10 @@ tg.MainButton.onClick(function() {
     }));
     let total = Object.values(cart).reduce((sum, item) => sum + item.price * item.quantity, 0);
     
-    let orderData = {
-        order: order,
-        total: total
-    };
-    
     try {
-        console.log('Sending order data:', orderData);
-        tg.sendData(JSON.stringify(orderData));
-        console.log('Order data sent successfully');
-        
-        // Не очищаем корзину и не обновляем кнопку здесь,
-        // так как это будет сделано в боте после получения данных
-        
-        // Не показываем alert, так как это может помешать закрытию WebApp
-        // alert('Ваш заказ отправлен!');
+        tg.sendData(JSON.stringify({ order, total }));
     } catch (error) {
-        console.error('Error sending order data:', error);
-        alert('Произошла ошибка при отправке заказа. Пожалуйста, попробуйте еще раз.');
+        console.error('Error sending data to bot:', error);
     }
 });
 
@@ -166,6 +144,14 @@ document.addEventListener('DOMContentLoaded', function() {
     updateMainButton();
     console.log('Page loaded, MainButton initialized');
 });
+
+function formatPrice(price) {
+    if (price >= 1000) {
+        return `${(price / 1000).toFixed(0)}k рупий`;
+    } else {
+        return `${price} рупий`;
+    }
+}
 
 
 
