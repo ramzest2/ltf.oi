@@ -59,12 +59,23 @@ function addToCart(id, name, price) {
 }
 
 document.querySelectorAll('.btn').forEach(btn => {
-    btn.addEventListener('click', function() {
-        let id = this.id.replace('btn', '');
-        let name = this.parentElement.querySelector('h3').textContent;
-        let price = parseInt(this.parentElement.querySelector('.price').textContent.replace(/[^0-9]/g, ''));
-        addToCart(id, name, price);
-    });
+    if (btn) {
+        btn.addEventListener('click', function() {
+            let id = this.id.replace('btn', '');
+            let nameElement = this.parentElement.querySelector('h3');
+            let priceElement = this.parentElement.querySelector('.price');
+            
+            if (nameElement && priceElement) {
+                let name = nameElement.textContent;
+                let price = parseInt(priceElement.textContent.replace(/[^0-9]/g, ''));
+                addToCart(id, name, price);
+            } else {
+                console.warn(`Missing name or price element for button ${id}`);
+            }
+        });
+    } else {
+        console.warn(`Button not found: ${btn}`);
+    }
 });
 
 function updateCartDisplay() {
@@ -109,6 +120,7 @@ document.getElementById('clear-cart').addEventListener('click', function() {
 
 tg.MainButton.onClick(function() {
     console.log('MainButton clicked');
+    console.log('Current cart:', cart);
     if (Object.keys(cart).length === 0) {
         alert('Ваша корзина пуста. Добавьте товары перед заказом.');
         return;
