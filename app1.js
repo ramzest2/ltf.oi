@@ -37,7 +37,7 @@ document.querySelectorAll('.filling-btn').forEach(btn => {
 
 function updateShawarmaPrice() {
     const priceElement = document.getElementById('shawarma-price');
-    priceElement.textContent = `${fillingPrices[selectedFilling] / 1000}k рупий.`;
+    priceElement.textContent = formatPrice(fillingPrices[selectedFilling]);
 }
 
 document.getElementById('btn-shawarma').addEventListener('click', function() {
@@ -120,7 +120,7 @@ tg.MainButton.onClick(function() {
     let order = Object.values(cart).map(item => ({
         name: item.name,
         quantity: item.quantity,
-        price: item.price // Цена в рупиях
+        price: item.price
     }));
     let total = Object.values(cart).reduce((sum, item) => sum + item.price * item.quantity, 0);
     
@@ -128,6 +128,7 @@ tg.MainButton.onClick(function() {
         tg.sendData(JSON.stringify({ order, total }));
     } catch (error) {
         console.error('Error sending data to bot:', error);
+        alert('Произошла ошибка при отправке заказа. Пожалуйста, попробуйте еще раз.');
     }
 });
 
