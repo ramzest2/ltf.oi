@@ -52,6 +52,8 @@ function addToCart(id, name, price) {
     } else {
         cart[id] = { name, price, quantity: 1 };
     }
+    console.log('Added to cart:', id, name, price);
+    console.log('Current cart:', cart);
     updateCartDisplay();
     updateMainButton();
 }
@@ -106,6 +108,12 @@ document.getElementById('clear-cart').addEventListener('click', function() {
 });
 
 tg.MainButton.onClick(function() {
+    console.log('MainButton clicked');
+    if (Object.keys(cart).length === 0) {
+        alert('Ваша корзина пуста. Добавьте товары перед заказом.');
+        return;
+    }
+
     let order = Object.values(cart).map(item => ({
         name: item.name,
         quantity: item.quantity,
@@ -118,16 +126,21 @@ tg.MainButton.onClick(function() {
         total: total
     };
     
-    // Отправляем данные в бот
-    tg.sendData(JSON.stringify(orderData));
-    
-    // Очищаем корзину после отправки
-    cart = {};
-    updateCartDisplay();
-    updateMainButton();
-    
-    // Показываем сообщение об успешной отправке заказа
-    alert('Ваш заказ отправлен!');
+    try {
+        tg.sendData(JSON.stringify(orderData));
+        console.log('Order data sent:', orderData);
+        
+        // Очищаем корзину после отправки
+        cart = {};
+        updateCartDisplay();
+        updateMainButton();
+        
+        // Показываем сообщение об успешной отправке заказа
+        alert('Ваш заказ отправлен!');
+    } catch (error) {
+        console.error('Error sending order data:', error);
+        alert('Произошла ошибка при отправке заказа. Пожалуйста, попробуйте еще раз.');
+    }
 });
 
 // Отображение имени пользователя
@@ -140,6 +153,8 @@ document.addEventListener('DOMContentLoaded', function() {
     document.querySelector('.filling-btn[data-filling="chicken"]').classList.add('selected');
     updateShawarmaPrice();
     updateCartDisplay();
+    updateMainButton();
+    console.log('Page loaded, MainButton initialized');
 });
 
 
