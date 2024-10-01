@@ -88,7 +88,7 @@ function updateCartDisplay() {
     for (let id in cart) {
         let item = cart[id];
         let itemElement = document.createElement('div');
-        itemElement.textContent = `${item.name} x${item.quantity} - ${item.price * item.quantity / 1000}k рупий.`;
+        itemElement.textContent = `${item.name} x${item.quantity} - ${formatPrice(item.price * item.quantity)}`;
         
         let removeButton = document.createElement('button');
         removeButton.textContent = 'Удалить';
