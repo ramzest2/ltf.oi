@@ -10,7 +10,7 @@ let cart = {};
 function updateMainButton() {
     let total = Object.values(cart).reduce((sum, item) => sum + item.price * item.quantity, 0);
     if (total > 0) {
-        tg.MainButton.setText(`Заказать (${total / 1000}k руб.)`);
+        tg.MainButton.setText(`Заказать (${total / 1000}k рупий.)`);
         tg.MainButton.show();
     } else {
         tg.MainButton.hide();
@@ -36,7 +36,7 @@ document.querySelectorAll('.filling-btn').forEach(btn => {
 
 function updateShawarmaPrice() {
     const priceElement = document.getElementById('shawarma-price');
-    priceElement.textContent = `${fillingPrices[selectedFilling] / 1000}k руб.`;
+    priceElement.textContent = `${fillingPrices[selectedFilling] / 1000}k рупий.`;
 }
 
 document.getElementById('btn-shawarma').addEventListener('click', function() {
@@ -63,52 +63,24 @@ document.querySelectorAll('.btn').forEach(btn => {
     });
 });
 
-tg.MainButton.onClick(async function() {
-    let order = Object.values(cart).map(item => `${item.name} x${item.quantity}`);
-    let total = Object.values(cart).reduce((sum, item) => sum + item.price * item.quantity, 0);
+tg.MainButton.onClick(function() {
+    let order = Object.values(cart).map(item => ({
+        name: item.name,
+        quantity: item.quantity,
+        price: item.price || 0
+    }));
+    let total = Object.values(cart).reduce((sum, item) => sum + (item.price || 0) * item.quantity, 0);
     
     let orderData = {
         order: order,
         total: total
     };
     
-    // Отправляем данные в бот и ждем ответа с QR-кодом
+    // Отправляем данные в бот
     tg.sendData(JSON.stringify(orderData));
     
-    // Ожидаем ответ от бота
-    tg.onEvent('message', function(message) {
-        try {
-            const responseData = JSON.parse(message.data);
-            if (responseData.error) {
-                alert(responseData.error);
-                return;
-            }
-            
-            // Отображаем QR-код и информацию о заказе
-            const qrContainer = document.getElementById('qr-container');
-            qrContainer.innerHTML = `
-                <h3>QR-код для оплаты</h3>
-                <img src="data:image/png;base64,${responseData.qr_code}" alt="QR Code">
-                <p>ID заказа: ${responseData.order_id}</p>
-                <p>Сумма к оплате: ${responseData.total / 1000}k IDR</p>
-                <p>Действителен до: ${responseData.expiry_time}</p>
-                <p>Отсканируйте QR-код для оплаты</p>
-            `;
-            qrContainer.style.display = 'block';
-            
-            // Скрываем основной контент
-            document.querySelector('.inner').style.display = 'none';
-            
-            // Меняем текст кнопки
-            tg.MainButton.setText('Завершить заказ');
-            tg.MainButton.onClick = function() {
-                tg.close();
-            };
-        } catch (error) {
-            console.error('Error processing bot response:', error);
-            alert('Произошла ошибка при получении QR-кода. Пожалуйста, попробуйте еще раз.');
-        }
-    });
+    // Закрываем мини-приложение
+    tg.close();
 });
 
 // Отображение имени пользователя
