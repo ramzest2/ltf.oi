@@ -10,7 +10,8 @@ let cart = {};
 function updateMainButton() {
     let total = Object.values(cart).reduce((sum, item) => sum + item.price * item.quantity, 0);
     if (total > 0) {
-        tg.MainButton.setText(`Заказать (${total / 1000}k рупий.)`);
+        let formattedTotal = (total / 1000).toFixed(0); // Округляем до целого числа тысяч
+        tg.MainButton.setText(`Заказать (${formattedTotal}k рупий)`);
         tg.MainButton.show();
     } else {
         tg.MainButton.hide();
