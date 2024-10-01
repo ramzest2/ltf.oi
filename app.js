@@ -51,6 +51,7 @@ function addToCart(id, name, price) {
     } else {
         cart[id] = { name, price, quantity: 1 };
     }
+    updateCartDisplay();
     updateMainButton();
 }
 
@@ -61,6 +62,46 @@ document.querySelectorAll('.btn').forEach(btn => {
         let price = parseInt(this.parentElement.querySelector('.price').textContent.replace(/[^0-9]/g, ''));
         addToCart(id, name, price);
     });
+});
+
+function updateCartDisplay() {
+    let cartElement = document.getElementById('cart');
+    if (!cartElement) {
+        cartElement = document.createElement('div');
+        cartElement.id = 'cart';
+        document.body.appendChild(cartElement);
+    }
+    cartElement.innerHTML = '';
+    
+    for (let id in cart) {
+        let item = cart[id];
+        let itemElement = document.createElement('div');
+        itemElement.textContent = `${item.name} x${item.quantity} - ${item.price * item.quantity / 1000}k рупий.`;
+        
+        let removeButton = document.createElement('button');
+        removeButton.textContent = 'Удалить';
+        removeButton.onclick = () => removeFromCart(id);
+        
+        itemElement.appendChild(removeButton);
+        cartElement.appendChild(itemElement);
+    }
+}
+
+function removeFromCart(id) {
+    if (cart[id]) {
+        cart[id].quantity--;
+        if (cart[id].quantity <= 0) {
+            delete cart[id];
+        }
+    }
+    updateCartDisplay();
+    updateMainButton();
+}
+
+document.getElementById('clear-cart').addEventListener('click', function() {
+    cart = {};
+    updateCartDisplay();
+    updateMainButton();
 });
 
 tg.MainButton.onClick(function() {
@@ -79,8 +120,13 @@ tg.MainButton.onClick(function() {
     // Отправляем данные в бот
     tg.sendData(JSON.stringify(orderData));
     
-    // Закрываем мини-приложение
-    tg.close();
+    // Очищаем корзину после отправки
+    cart = {};
+    updateCartDisplay();
+    updateMainButton();
+    
+    // Показываем сообщение об успешной отправке заказа
+    alert('Ваш заказ отправлен!');
 });
 
 // Отображение имени пользователя
@@ -92,6 +138,7 @@ usercard.appendChild(p);
 document.addEventListener('DOMContentLoaded', function() {
     document.querySelector('.filling-btn[data-filling="chicken"]').classList.add('selected');
     updateShawarmaPrice();
+    updateCartDisplay();
 });
 
 
