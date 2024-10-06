@@ -1,73 +1,48 @@
 body {
-	margin: 0;
-	padding: 0;
-	font-size: 18px;
-	color: var(--tg-theme-text-color);
-	background: var(--tg-theme-bg-color);
+    margin: 0;
+    padding: 0;
+    font-size: 18px;
+    color: var(--tg-theme-text-color);
+    background: var(--tg-theme-bg-color);
 }
 
-
 .container {
-	max-width: 390px;
-	margin: 0 auto;
-	padding: 20px;
+    max-width: 390px;
 }
 
 .inner {
-	display: grid;
-	grid-template-columns: 1fr 1fr;
-	gap: 20px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-gap: 10px;
 }
 
 .img {
-	width: 100%;
-	height: 150px;
-	object-fit: cover;
-	border-radius: 10px;
+    width: 150px;
 }
 
 .item {
-	text-align: center;
-	background: var(--tg-theme-secondary-bg-color);
-	border-radius: 10px;
-	padding: 15px;
-}
-
-.item h3 {
-	margin: 10px 0;
-}
-
-.price {
-	font-weight: bold;
-	color: var(--tg-theme-hint-color);
-	margin: 10px 0;
+    text-align: center;
 }
 
 .btn {
-	display: inline-block;
-	padding: 10px 20px;
-	border: none;
-	background: var(--tg-theme-button-color);
-	border-radius: 10px;
-	color: var(--tg-theme-button-text-color);
-	text-transform: uppercase;
-	font-weight: 700;
-	transition: opacity 0.2s linear;
+    display: inline-block;
+    padding: 10px 20px;
+    border: none;
+    background: rgb(248, 168, 24);
+    border-radius: 10px;
+    color: #fff;
+    text-transform: uppercase;
+    font-weight: 700;
+
+    transition: background .2s linear;
 }
 
 .btn:hover {
-	opacity: 0.8;
+    background: lightgreen;
 }
 
 .usercard {
-	text-align: center;
-	margin-top: 20px;
-}
-/* Новые стили для цен */
-.price {
-    font-weight: bold;
-    color: var(--tg-theme-hint-color);
-    margin: 10px 0;
+    text-align: center;
 }
 
 .filling-buttons {
@@ -77,32 +52,50 @@ body {
 }
 
 .filling-btn {
-    background: none;
-    border: 1px solid var(--tg-theme-button-color);
-    border-radius: 50%;
-    width: 30px;
-    height: 30px;
     margin: 0 5px;
+    padding: 5px 10px;
+    border: none;
+    background: #f0f0f0;
+    border-radius: 5px;
     cursor: pointer;
-    transition: background-color 0.3s;
+    font-size: 16px;
 }
 
 .filling-btn.selected {
-    background-color: var(--tg-theme-button-color);
+    background: #4CAF50;
+    color: white;
 }
 
+.voice-order-btn {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 60px;
+    height: 60px;
+    font-size: 24px;
+    cursor: pointer;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
 
+.voice-order-btn:hover {
+    background-color: #45a049;
+}
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+/* Медиа-запрос для мобильных устройств */
+@media (max-width: 600px) {
+    .inner {
+        grid-template-columns: 1fr;
+    }
+    
+    .img {
+        width: 100%;
+        max-width: 250px;
+    }
+}
