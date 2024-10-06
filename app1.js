@@ -1,158 +1,139 @@
 let tg = window.Telegram.WebApp;
-
 tg.expand();
 
-tg.MainButton.textColor = '#FFFFFF';
-tg.MainButton.color = '#2cab37';
+let item = "";
 
-let cart = {};
+let btn1 = document.getElementById("btn-shawarma");
+let btn2 = document.getElementById("btn2");
+let btn3 = document.getElementById("btn3");
+let btn4 = document.getElementById("btn4");
+let btn5 = document.getElementById("btn5");
+let btn6 = document.getElementById("btn6");
 
-function updateMainButton() {
-    let total = Object.values(cart).reduce((sum, item) => sum + item.price * item.quantity, 0);
-    if (total > 0) {
-        tg.MainButton.setText(`Заказать (${formatPrice(total)})`);
-        tg.MainButton.show();
-    } else {
+btn1.addEventListener("click", function(){
+    if (tg.MainButton.isVisible) {
         tg.MainButton.hide();
     }
-}
-
-let selectedFilling = 'chicken';
-const fillingPrices = {
-    'chicken': 25000,
-    'beef': 40000,
-    'shrimp': 40000,
-    'falafel': 25000
-};
-
-document.querySelectorAll('.filling-btn').forEach(btn => {
-    btn.addEventListener('click', function() {
-        document.querySelectorAll('.filling-btn').forEach(b => b.classList.remove('selected'));
-        this.classList.add('selected');
-        selectedFilling = this.dataset.filling;
-        updateShawarmaPrice();
-    });
-});
-
-function updateShawarmaPrice() {
-    const priceElement = document.getElementById('shawarma-price');
-    priceElement.textContent = formatPrice(fillingPrices[selectedFilling]);
-}
-
-document.getElementById('btn-shawarma').addEventListener('click', function() {
-    const filling = document.querySelector('.filling-btn.selected');
-    const fillingEmoji = filling ? filling.dataset.emoji : '🐓';
-    addToCart('shawarma', `Шаурма ${fillingEmoji}`, fillingPrices[selectedFilling]);
-});
-
-function addToCart(id, name, price) {
-    if (cart[id]) {
-        cart[id].quantity++;
-    } else {
-        cart[id] = { name, price: price * 1000, quantity: 1 }; // Умножаем на 1000, так как цены указаны в тысячах
-    }
-    updateCartDisplay();
-    updateMainButton();
-}
-
-document.querySelectorAll('.btn').forEach(btn => {
-    if (btn) {
-        btn.addEventListener('click', function() {
-            let id = this.id.replace('btn', '');
-            let nameElement = this.parentElement.querySelector('h3');
-            let priceElement = this.parentElement.querySelector('.price');
-            
-            if (nameElement && priceElement) {
-                let name = nameElement.textContent;
-                let price = parseInt(priceElement.textContent.replace(/[^0-9]/g, ''));
-                addToCart(id, name, price);
-            } else {
-                console.warn(`Missing name or price element for button ${id}`);
-            }
-        });
-    } else {
-        console.warn(`Button not found: ${btn}`);
+    else {
+        tg.MainButton.setText("Вы выбрали шаурму!");
+        item = "1";
+        tg.MainButton.show();
     }
 });
 
-function updateCartDisplay() {
-    let cartElement = document.getElementById('cart');
-    if (!cartElement) {
-        cartElement = document.createElement('div');
-        cartElement.id = 'cart';
-        document.body.appendChild(cartElement);
+btn2.addEventListener("click", function(){
+    if (tg.MainButton.isVisible) {
+        tg.MainButton.hide();
     }
-    cartElement.innerHTML = '';
-    
-    for (let id in cart) {
-        let item = cart[id];
-        let itemElement = document.createElement('div');
-        itemElement.textContent = `${item.name} x${item.quantity} - ${formatPrice(item.price * item.quantity)}`;
-        
-        let removeButton = document.createElement('button');
-        removeButton.textContent = 'Удалить';
-        removeButton.onclick = () => removeFromCart(id);
-        
-        itemElement.appendChild(removeButton);
-        cartElement.appendChild(itemElement);
-    }
-}
-
-function removeFromCart(id) {
-    if (cart[id]) {
-        cart[id].quantity--;
-        if (cart[id].quantity <= 0) {
-            delete cart[id];
-        }
-    }
-    updateCartDisplay();
-    updateMainButton();
-}
-
-// document.getElementById('clear-cart').addEventListener('click', function() {
-    // cart = {};
-    // updateCartDisplay();
-    // updateMainButton();
-// });
-
-tg.MainButton.onClick(function() {
-    let order = Object.values(cart).map(item => ({
-        name: item.name,
-        quantity: item.quantity,
-        price: item.price
-    }));
-    let total = Object.values(cart).reduce((sum, item) => sum + item.price * item.quantity, 0);
-    
-    try {
-        tg.sendData(JSON.stringify({ order, total }));
-    } catch (error) {
-        console.error('Error sending data to bot:', error);
-        alert('Произошла ошибка при отправке заказа. Пожалуйста, попробуйте еще раз.');
+    else {
+        tg.MainButton.setText("Вы выбрали питу!");
+        item = "2";
+        tg.MainButton.show();
     }
 });
 
-// Отображение имени пользователя
+btn3.addEventListener("click", function(){
+    if (tg.MainButton.isVisible) {
+        tg.MainButton.hide();
+    }
+    else {
+        tg.MainButton.setText("Вы выбрали хумус!");
+        item = "3";
+        tg.MainButton.show();
+    }
+});
+
+btn4.addEventListener("click", function(){
+    if (tg.MainButton.isVisible) {
+        tg.MainButton.hide();
+    }
+    else {
+        tg.MainButton.setText("Вы выбрали шашлык из курицы!");
+        item = "4";
+        tg.MainButton.show();
+    }
+});
+
+btn5.addEventListener("click", function(){
+    if (tg.MainButton.isVisible) {
+        tg.MainButton.hide();
+    }
+    else {
+        tg.MainButton.setText("Вы выбрали гёзлеме!");
+        item = "5";
+        tg.MainButton.show();
+    }
+});
+
+btn6.addEventListener("click", function(){
+    if (tg.MainButton.isVisible) {
+        tg.MainButton.hide();
+    }
+    else {
+        tg.MainButton.setText("Вы выбрали чечевичный суп!");
+        item = "6";
+        tg.MainButton.show();
+    }
+});
+
+Telegram.WebApp.onEvent("mainButtonClicked", function(){
+    tg.sendData(item);
+});
+
 let usercard = document.getElementById("usercard");
+
 let p = document.createElement("p");
-p.innerText = `${tg.initDataUnsafe.user.first_name} ${tg.initDataUnsafe.user.last_name}`;
+
+p.innerText = `${tg.initDataUnsafe.user.first_name}
+${tg.initDataUnsafe.user.last_name}`;
+
 usercard.appendChild(p);
 
-document.addEventListener('DOMContentLoaded', function() {
-    document.querySelector('.filling-btn[data-filling="chicken"]').classList.add('selected');
-    updateShawarmaPrice();
-    updateCartDisplay();
-    updateMainButton();
-    console.log('Page loaded, MainButton initialized');
-});
+function handleVoiceOrder() {
+    if ('webkitSpeechRecognition' in window) {
+        const recognition = new webkitSpeechRecognition();
+        recognition.lang = 'ru-RU';
+        recognition.interimResults = false;
+        recognition.maxAlternatives = 1;
 
-function formatPrice(price) {
-    return `${(price / 1000).toFixed(0)}k рупий`;
+        recognition.start();
+        alert('Говорите, пожалуйста...');
+
+        recognition.onresult = function(event) {
+            const speechResult = event.results[0][0].transcript.toLowerCase();
+            console.log('Распознанная речь:', speechResult);
+            processVoiceOrder(speechResult);
+        };
+
+        recognition.onerror = function(event) {
+            console.error('Ошибка распознавания речи:', event.error);
+            alert('Извините, произошла ошибка при распознавании речи. Попробуйте еще раз.');
+        };
+
+        recognition.onend = function() {
+            console.log('Распознавание речи завершено');
+        };
+    } else {
+        alert('Ваш браузер не поддерживает распознавание речи.');
+    }
 }
 
+function processVoiceOrder(speechText) {
+    if (speechText.includes('шаурма')) {
+        btn1.click();
+    } else if (speechText.includes('пита')) {
+        btn2.click();
+    } else if (speechText.includes('хумус')) {
+        btn3.click();
+    } else if (speechText.includes('шашлык') || speechText.includes('курица')) {
+        btn4.click();
+    } else if (speechText.includes('гёзлеме')) {
+        btn5.click();
+    } else if (speechText.includes('суп') || speechText.includes('чечевичный')) {
+        btn6.click();
+    } else {
+        alert('Извините, я не смог распознать ваш заказ. Пожалуйста, попробуйте еще раз.');
+    }
+}
 
-
-
-
-
-
-
+document.getElementById('voiceOrderBtn').addEventListener('click', handleVoiceOrder);
