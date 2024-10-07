@@ -38,6 +38,7 @@ setupEventSource();
 
 function handleServerMessage(data) {
     console.log('Received server message:', data);
+    console.log('handleServerMessage called with data:', data);
     if (data.type === 'bot_response') {
         addMessageToChat('Бот', data.text);
         if (data.audio) {
