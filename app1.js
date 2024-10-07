@@ -12,6 +12,7 @@ let item = "";
 let eventSource;
 let mediaRecorder;
 let audioChunks = [];
+let isRecording = false;
 
 function setupEventSource() {
     console.log('Setting up EventSource...');
@@ -123,12 +124,21 @@ const recordVoiceBtn = document.getElementById('recordVoiceBtn');
 
 voiceOrderBtn.addEventListener('click', toggleVoiceInterface);
 sendTextBtn.addEventListener('click', () => sendMessage(textInput.value));
-recordVoiceBtn.addEventListener('mousedown', startRecording);
-recordVoiceBtn.addEventListener('mouseup', stopRecording);
+recordVoiceBtn.addEventListener('click', toggleRecording);
 
 function toggleVoiceInterface() {
     voiceInterface.style.display = voiceInterface.style.display === 'none' ? 'block' : 'none';
     voiceOrderBtn.textContent = voiceInterface.style.display === 'none' ? '🎤' : '❌';
+}
+
+function toggleRecording() {
+    if (isRecording) {
+        stopRecording();
+    } else {
+        startRecording();
+    }
+    isRecording = !isRecording;
+    recordVoiceBtn.textContent = isRecording ? '⏹️' : '🎤';
 }
 
 async function startRecording() {
@@ -153,31 +163,31 @@ async function startRecording() {
             audioChunks.push(event.data);
         });
 
+        mediaRecorder.addEventListener('stop', () => {
+            console.log('Processing audio chunks...');
+            const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+            console.log('Audio blob created:', audioBlob);
+            sendAudioMessage(audioBlob);
+        });
+
         mediaRecorder.start();
         console.log('MediaRecorder started');
-        recordVoiceBtn.textContent = 'Запись...';
+        document.getElementById('recordingStatus').textContent = 'Запись...';
     } catch (error) {
         console.error('Error starting recording:', error);
         alert('Не удалось начать запись. Пожалуйста, проверьте разрешения микрофона.');
+        isRecording = false;
+        recordVoiceBtn.textContent = '🎤';
     }
 }
 
 function stopRecording() {
     console.log('Stopping recording...');
-    if (!mediaRecorder) {
-        console.warn('MediaRecorder not initialized');
-        return;
+    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+        mediaRecorder.stop();
+        console.log('MediaRecorder stopped');
+        document.getElementById('recordingStatus').textContent = 'Запись остановлена. Обработка...';
     }
-
-    mediaRecorder.stop();
-    console.log('MediaRecorder stopped');
-    recordVoiceBtn.textContent = 'Запись';
-    mediaRecorder.addEventListener('stop', () => {
-        console.log('Processing audio chunks...');
-        const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-        console.log('Audio blob created:', audioBlob);
-        sendAudioMessage(audioBlob);
-    });
 }
 
 function sendAudioMessage(audioBlob) {
@@ -252,8 +262,4 @@ function processVoiceOrder(speechText) {
 
 tg.onEvent('viewportChanged', function() {
     console.log('Viewport changed. Checking connection...');
-    if (eventSource.readyState === EventSource.CLOSED) {
-        console.log('EventSource closed, attempting to reconnect...');
-        setupEventSource();
-    }
-});
+    if (eventSource.readyState === Event
