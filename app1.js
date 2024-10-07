@@ -6,7 +6,7 @@ let socket;
 
 // Функция для установки WebSocket соединения
 function connectWebSocket() {
-    socket = new WebSocket('ws://your-server-address:8765'); // Замените на адрес вашего сервера
+    socket = new WebSocket('ws://localhost:8765'); // Замените на адрес вашего сервера
 
     socket.onopen = function(event) {
         console.log('WebSocket соединение установлено');
