@@ -2,6 +2,51 @@ let tg = window.Telegram.WebApp;
 tg.expand();
 
 let item = "";
+let socket;
+
+// Функция для установки WebSocket соединения
+function connectWebSocket() {
+    socket = new WebSocket('ws://your-server-address:8765'); // Замените на адрес вашего сервера
+
+    socket.onopen = function(event) {
+        console.log('WebSocket соединение установлено');
+    };
+
+    socket.onmessage = function(event) {
+        console.log('Получено сообщение от сервера:', event.data);
+        handleServerMessage(event.data);
+    };
+
+    socket.onclose = function(event) {
+        console.log('WebSocket соединение закрыто');
+        // Можно добавить логику переподключения здесь
+    };
+
+    socket.onerror = function(error) {
+        console.error('Ошибка WebSocket:', error);
+    };
+}
+
+// Вызываем функцию для установки соединения
+connectWebSocket();
+
+// Функция для обработки сообщений от сервера
+function handleServerMessage(message) {
+    try {
+        const data = JSON.parse(message);
+        if (data.type === 'bot_response') {
+            addMessageToChat('Бот', data.text);
+            if (data.audio) {
+                playAudio(data.audio);
+            }
+            if (data.order_confirmation) {
+                processVoiceOrder(data.text);
+            }
+        }
+    } catch (error) {
+        console.error('Ошибка при обработке сообщения от сервера:', error);
+    }
+}
 
 let btn1 = document.getElementById("btn-shawarma");
 let btn2 = document.getElementById("btn2");
@@ -77,7 +122,11 @@ btn6.addEventListener("click", function(){
 });
 
 Telegram.WebApp.onEvent("mainButtonClicked", function(){
-    tg.sendData(item);
+    if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({type: 'menu_selection', item: item}));
+    } else {
+        console.error('WebSocket не подключен');
+    }
 });
 
 let usercard = document.getElementById("usercard");
@@ -119,9 +168,13 @@ function sendMessage(text) {
     
     addMessageToChat('Вы', text);
     
-    // Отправка сообщения боту
-    console.log('Отправка сообщения:', text);
-    tg.sendData(JSON.stringify({type: 'text_message', text: text}));
+    // Отправка сообщения через WebSocket
+    if (socket && socket.readyState === WebSocket.OPEN) {
+        console.log('Отправка сообщения:', text);
+        socket.send(JSON.stringify({type: 'text_message', text: text}));
+    } else {
+        console.error('WebSocket не подключен');
+    }
     
     textInput.value = '';
 }
@@ -156,7 +209,11 @@ function stopRecording() {
         reader.onloadend = function() {
             const base64Audio = reader.result.split(',')[1];
             console.log('Отправка аудио сообщения');
-            tg.sendData(JSON.stringify({type: 'voice_message', audio: base64Audio}));
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                socket.send(JSON.stringify({type: 'voice_message', audio: base64Audio}));
+            } else {
+                console.error('WebSocket не подключен');
+            }
         }
     });
 }
@@ -167,25 +224,6 @@ function addMessageToChat(sender, message) {
     chatDiv.appendChild(messageElement);
     chatDiv.scrollTop = chatDiv.scrollHeight;
 }
-
-// Обработка входящих сообщений от бота
-tg.onEvent('message', function(message) {
-    console.log('Получено сообщение от бота:', message);
-    try {
-        const data = JSON.parse(message);
-        if (data.type === 'bot_response') {
-            addMessageToChat('Бот', data.text);
-            if (data.audio) {
-                playAudio(data.audio);
-            }
-            if (data.order_confirmation) {
-                processVoiceOrder(data.text);
-            }
-        }
-    } catch (error) {
-        console.error('Ошибка при обработке сообщения от бота:', error);
-    }
-});
 
 function playAudio(base64Audio) {
     try {
@@ -216,8 +254,13 @@ function processVoiceOrder(speechText) {
     }
 }
 
-// Добавляем обработчик для проверки соединения
+// Обработчик для проверки соединения
 tg.onEvent('viewportChanged', function() {
     console.log('Viewport changed. Checking connection...');
-    tg.sendData(JSON.stringify({type: 'connection_check'}));
+    if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({type: 'connection_check'}));
+    } else {
+        console.log('WebSocket не подключен, попытка переподключения...');
+        connectWebSocket();
+    }
 });
