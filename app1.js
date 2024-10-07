@@ -2,27 +2,25 @@ let tg = window.Telegram.WebApp;
 tg.expand();
 
 let item = "";
-let pusher;
-let channel;
+let eventSource;
 
-// Функция для установки Pusher соединения
-function connectPusher() {
-    pusher = new Pusher(CONFIG.PUSHER_APP_KEY, {
-        cluster: CONFIG.PUSHER_CLUSTER
-    });
+function setupEventSource() {
+    eventSource = new EventSource(`${CONFIG.SERVER_ENDPOINT}/stream`);
 
-    channel = pusher.subscribe('my-channel');
-
-    channel.bind('bot_response', function(data) {
-        console.log('Получено сообщение от сервера:', data);
+    eventSource.onmessage = function(event) {
+        const data = JSON.parse(event.data);
         handleServerMessage(data);
-    });
+    };
+
+    eventSource.onerror = function(error) {
+        console.error('EventSource failed:', error);
+        eventSource.close();
+        setTimeout(setupEventSource, 5000); // Попытка переподключения через 5 секунд
+    };
 }
 
-// Вызываем функцию для установки соединения
-connectPusher();
+setupEventSource();
 
-// Функция для обработки сообщений от сервера
 function handleServerMessage(data) {
     if (data.type === 'bot_response') {
         addMessageToChat('Бот', data.text);
@@ -35,12 +33,24 @@ function handleServerMessage(data) {
     }
 }
 
-let btn1 = document.getElementById("btn-shawarma");
-let btn2 = document.getElementById("btn2");
-let btn3 = document.getElementById("btn3");
-let btn4 = document.getElementById("btn4");
-let btn5 = document.getElementById("btn5");
-let btn6 = document.getElementById("btn6");
+function sendMessage(text) {
+    if (text.trim() === '') return;
+    
+    addMessageToChat('Вы', text);
+    
+    fetch(`${CONFIG.SERVER_ENDPOINT}/send-message`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({type: 'text_message', text: text}),
+    })
+    .then(response => response.json())
+    .then(data => console.log('Success:', data))
+    .catch((error) => console.error('Error:', error));
+    
+    textInput.value = '';
+}
 
 function setupButton(btn, text, itemValue) {
     btn.addEventListener("click", function(){
@@ -54,15 +64,15 @@ function setupButton(btn, text, itemValue) {
     });
 }
 
-setupButton(btn1, "Вы выбрали шаурму!", "1");
-setupButton(btn2, "Вы выбрали питу!", "2");
-setupButton(btn3, "Вы выбрали хумус!", "3");
-setupButton(btn4, "Вы выбрали шашлык из курицы!", "4");
-setupButton(btn5, "Вы выбрали гёзлеме!", "5");
-setupButton(btn6, "Вы выбрали чечевичный суп!", "6");
+setupButton(document.getElementById("btn-shawarma"), "Вы выбрали шаурму!", "1");
+setupButton(document.getElementById("btn2"), "Вы выбрали питу!", "2");
+setupButton(document.getElementById("btn3"), "Вы выбрали хумус!", "3");
+setupButton(document.getElementById("btn4"), "Вы выбрали шашлык из курицы!", "4");
+setupButton(document.getElementById("btn5"), "Вы выбрали гёзлеме!", "5");
+setupButton(document.getElementById("btn6"), "Вы выбрали чечевичный суп!", "6");
 
 Telegram.WebApp.onEvent("mainButtonClicked", function(){
-    sendMessage(item);
+    sendMessage(`Выбран пункт меню: ${item}`);
 });
 
 let usercard = document.getElementById("usercard");
@@ -88,26 +98,6 @@ recordVoiceBtn.addEventListener('mouseup', stopRecording);
 function toggleVoiceInterface() {
     voiceInterface.style.display = voiceInterface.style.display === 'none' ? 'block' : 'none';
     voiceOrderBtn.textContent = voiceInterface.style.display === 'none' ? '🎤' : '❌';
-}
-
-function sendMessage(text) {
-    if (text.trim() === '') return;
-    
-    addMessageToChat('Вы', text);
-    
-    // Отправка сообщения на сервер
-    fetch(`${CONFIG.SERVER_ENDPOINT}/send-message`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({type: 'text_message', text: text}),
-    })
-    .then(response => response.json())
-    .then(data => console.log('Success:', data))
-    .catch((error) => console.error('Error:', error));
-    
-    textInput.value = '';
 }
 
 async function startRecording() {
@@ -144,7 +134,6 @@ function sendAudioMessage(audioBlob) {
     reader.readAsDataURL(audioBlob);
     reader.onloadend = function() {
         const base64Audio = reader.result.split(',')[1];
-        console.log('Отправка аудио сообщения');
         fetch(`${CONFIG.SERVER_ENDPOINT}/send-audio`, {
             method: 'POST',
             headers: {
@@ -178,6 +167,26 @@ function processVoiceOrder(speechText) {
     console.log('Обработка голосового заказа:', speechText);
     speechText = speechText.toLowerCase();
     if (speechText.includes('шаурма')) {
-        btn1.click();
+        document.getElementById("btn-shawarma").click();
     } else if (speechText.includes('пита')) {
-        btn2
+        document.getElementById("btn2").click();
+    } else if (speechText.includes('хумус')) {
+        document.getElementById("btn3").click();
+    } else if (speechText.includes('шашлык') || speechText.includes('курица')) {
+        document.getElementById("btn4").click();
+    } else if (speechText.includes('гёзлеме')) {
+        document.getElementById("btn5").click();
+    } else if (speechText.includes('суп') || speechText.includes('чечевичный')) {
+        document.getElementById("btn6").click();
+    } else {
+        addMessageToChat('Бот', 'Извините, я не смог распознать ваш заказ. Пожалуйста, попробуйте еще раз.');
+    }
+}
+
+tg.onEvent('viewportChanged', function() {
+    console.log('Viewport changed. Checking connection...');
+    if (eventSource.readyState === EventSource.CLOSED) {
+        console.log('EventSource закрыт, попытка переподключения...');
+        setupEventSource();
+    }
+});
