@@ -33,7 +33,6 @@ body {
     color: #fff;
     text-transform: uppercase;
     font-weight: 700;
-
     transition: background .2s linear;
 }
 
@@ -82,10 +81,62 @@ body {
     display: flex;
     justify-content: center;
     align-items: center;
+    z-index: 1000;
 }
 
 .voice-order-btn:hover {
     background-color: #45a049;
+}
+
+/* Новые стили для интерфейса голосового помощника */
+.voice-interface {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: var(--tg-theme-bg-color);
+    border-top: 1px solid var(--tg-theme-hint-color);
+    padding: 10px;
+    display: none;
+    z-index: 999;
+}
+
+.chat {
+    height: 200px;
+    overflow-y: auto;
+    border: 1px solid var(--tg-theme-hint-color);
+    border-radius: 5px;
+    padding: 10px;
+    margin-bottom: 10px;
+    background: var(--tg-theme-secondary-bg-color);
+}
+
+.input-area {
+    display: flex;
+    gap: 10px;
+}
+
+.input-area input {
+    flex-grow: 1;
+    padding: 10px;
+    border: 1px solid var(--tg-theme-hint-color);
+    border-radius: 5px;
+    background: var(--tg-theme-secondary-bg-color);
+    color: var(--tg-theme-text-color);
+}
+
+.input-area button {
+    padding: 10px 15px;
+    border: none;
+    border-radius: 5px;
+    background: #4CAF50;
+    color: white;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.input-area button:hover {
+    background: #45a049;
 }
 
 /* Медиа-запрос для мобильных устройств */
@@ -97,5 +148,14 @@ body {
     .img {
         width: 100%;
         max-width: 250px;
+    }
+
+    .voice-interface {
+        height: 50vh;
+        overflow-y: auto;
+    }
+
+    .chat {
+        height: calc(100% - 60px);
     }
 }
