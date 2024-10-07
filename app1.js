@@ -1,9 +1,10 @@
 // Проверка наличия CONFIG
-if (typeof CONFIG === 'undefined' || !CONFIG.SERVER_ENDPOINT) {
-    console.error('CONFIG or SERVER_ENDPOINT is not defined. Please check your configuration setup.');
-    CONFIG = CONFIG || {};
-    CONFIG.SERVER_ENDPOINT = CONFIG.SERVER_ENDPOINT || 'http://localhost:8000';
+if (typeof CONFIG === 'undefined') {
+    console.error('CONFIG is not defined. Please check your configuration setup.');
+    // Можно добавить значения по умолчанию или прервать выполнение скрипта
 }
+
+console.log('CONFIG:', CONFIG); // Для отладки
 
 let tg = window.Telegram.WebApp;
 tg.expand();
@@ -12,7 +13,7 @@ let item = "";
 let eventSource;
 
 function setupEventSource() {
-    eventSource = new EventSource(`${CONFIG.SERVER_ENDPOINT}/stream`);
+    eventSource = new EventSource(CONFIG.SSE_ENDPOINT);
 
     eventSource.onmessage = function(event) {
         const data = JSON.parse(event.data);
@@ -22,7 +23,7 @@ function setupEventSource() {
     eventSource.onerror = function(error) {
         console.error('EventSource failed:', error);
         eventSource.close();
-        setTimeout(setupEventSource, 5000); // Попытка переподключения через 5 секунд
+        setTimeout(setupEventSource, CONFIG.APP_SETTINGS.RECONNECT_TIMEOUT);
     };
 }
 
@@ -45,7 +46,7 @@ function sendMessage(text) {
     
     addMessageToChat('Вы', text);
     
-    fetch(`${CONFIG.SERVER_ENDPOINT}/send-message`, {
+    fetch(CONFIG.MESSAGE_ENDPOINT, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -71,12 +72,12 @@ function setupButton(btn, text, itemValue) {
     });
 }
 
-setupButton(document.getElementById("btn-shawarma"), "Вы выбрали шаурму!", "1");
-setupButton(document.getElementById("btn2"), "Вы выбрали питу!", "2");
-setupButton(document.getElementById("btn3"), "Вы выбрали хумус!", "3");
-setupButton(document.getElementById("btn4"), "Вы выбрали шашлык из курицы!", "4");
-setupButton(document.getElementById("btn5"), "Вы выбрали гёзлеме!", "5");
-setupButton(document.getElementById("btn6"), "Вы выбрали чечевичный суп!", "6");
+setupButton(document.getElementById("btn-shawarma"), "Вы выбрали шаурму!", CONFIG.MENU_ITEMS.SHAWARMA);
+setupButton(document.getElementById("btn2"), "Вы выбрали питу!", CONFIG.MENU_ITEMS.PITA);
+setupButton(document.getElementById("btn3"), "Вы выбрали хумус!", CONFIG.MENU_ITEMS.HUMMUS);
+setupButton(document.getElementById("btn4"), "Вы выбрали шашлык из курицы!", CONFIG.MENU_ITEMS.CHICKEN_SHISH);
+setupButton(document.getElementById("btn5"), "Вы выбрали гёзлеме!", CONFIG.MENU_ITEMS.GOZLEME);
+setupButton(document.getElementById("btn6"), "Вы выбрали чечевичный суп!", CONFIG.MENU_ITEMS.LENTIL_SOUP);
 
 Telegram.WebApp.onEvent("mainButtonClicked", function(){
     sendMessage(`Выбран пункт меню: ${item}`);
@@ -141,7 +142,7 @@ function sendAudioMessage(audioBlob) {
     reader.readAsDataURL(audioBlob);
     reader.onloadend = function() {
         const base64Audio = reader.result.split(',')[1];
-        fetch(`${CONFIG.SERVER_ENDPOINT}/send-audio`, {
+        fetch(CONFIG.AUDIO_ENDPOINT, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
