@@ -1,3 +1,10 @@
+// Проверка наличия CONFIG
+if (typeof CONFIG === 'undefined' || !CONFIG.SERVER_ENDPOINT) {
+    console.error('CONFIG or SERVER_ENDPOINT is not defined. Please check your configuration setup.');
+    CONFIG = CONFIG || {};
+    CONFIG.SERVER_ENDPOINT = CONFIG.SERVER_ENDPOINT || 'http://localhost:8000';
+}
+
 let tg = window.Telegram.WebApp;
 tg.expand();
 
