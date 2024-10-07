@@ -1,21 +1,28 @@
 // Проверка наличия CONFIG
 if (typeof CONFIG === 'undefined') {
     console.error('CONFIG is not defined. Please check your configuration setup.');
-    // Можно добавить значения по умолчанию или прервать выполнение скрипта
+} else {
+    console.log('CONFIG loaded:', CONFIG);
 }
-
-console.log('CONFIG:', CONFIG); // Для отладки
 
 let tg = window.Telegram.WebApp;
 tg.expand();
 
 let item = "";
 let eventSource;
+let mediaRecorder;
+let audioChunks = [];
 
 function setupEventSource() {
+    console.log('Setting up EventSource...');
     eventSource = new EventSource(CONFIG.SSE_ENDPOINT);
 
+    eventSource.onopen = function(event) {
+        console.log('EventSource connected');
+    };
+
     eventSource.onmessage = function(event) {
+        console.log('EventSource message received:', event.data);
         const data = JSON.parse(event.data);
         handleServerMessage(data);
     };
@@ -30,6 +37,7 @@ function setupEventSource() {
 setupEventSource();
 
 function handleServerMessage(data) {
+    console.log('Received server message:', data);
     if (data.type === 'bot_response') {
         addMessageToChat('Бот', data.text);
         if (data.audio) {
@@ -38,12 +46,15 @@ function handleServerMessage(data) {
         if (data.order_confirmation) {
             processVoiceOrder(data.text);
         }
+    } else {
+        console.warn('Unknown message type:', data.type);
     }
 }
 
 function sendMessage(text) {
     if (text.trim() === '') return;
     
+    console.log('Sending message:', text);
     addMessageToChat('Вы', text);
     
     fetch(CONFIG.MESSAGE_ENDPOINT, {
@@ -53,9 +64,15 @@ function sendMessage(text) {
         },
         body: JSON.stringify({type: 'text_message', text: text}),
     })
-    .then(response => response.json())
-    .then(data => console.log('Success:', data))
-    .catch((error) => console.error('Error:', error));
+    .then(response => {
+        console.log('Response status:', response.status);
+        return response.json();
+    })
+    .then(data => {
+        console.log('Server response:', data);
+        // Здесь можно добавить обработку ответа от сервера
+    })
+    .catch((error) => console.error('Error sending message:', error));
     
     textInput.value = '';
 }
@@ -95,9 +112,6 @@ const textInput = document.getElementById('textInput');
 const sendTextBtn = document.getElementById('sendTextBtn');
 const recordVoiceBtn = document.getElementById('recordVoiceBtn');
 
-let mediaRecorder;
-let audioChunks = [];
-
 voiceOrderBtn.addEventListener('click', toggleVoiceInterface);
 sendTextBtn.addEventListener('click', () => sendMessage(textInput.value));
 recordVoiceBtn.addEventListener('mousedown', startRecording);
@@ -109,35 +123,47 @@ function toggleVoiceInterface() {
 }
 
 async function startRecording() {
+    console.log('Starting recording...');
     try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        console.log('Got media stream:', stream);
         mediaRecorder = new MediaRecorder(stream);
         audioChunks = [];
 
         mediaRecorder.addEventListener('dataavailable', event => {
+            console.log('Data available:', event.data);
             audioChunks.push(event.data);
         });
 
         mediaRecorder.start();
+        console.log('MediaRecorder started');
         recordVoiceBtn.textContent = 'Запись...';
     } catch (error) {
-        console.error('Ошибка при начале записи:', error);
+        console.error('Error starting recording:', error);
         alert('Не удалось начать запись. Пожалуйста, проверьте разрешения микрофона.');
     }
 }
 
 function stopRecording() {
-    if (!mediaRecorder) return;
+    console.log('Stopping recording...');
+    if (!mediaRecorder) {
+        console.warn('MediaRecorder not initialized');
+        return;
+    }
 
     mediaRecorder.stop();
+    console.log('MediaRecorder stopped');
     recordVoiceBtn.textContent = 'Запись';
     mediaRecorder.addEventListener('stop', () => {
+        console.log('Processing audio chunks...');
         const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+        console.log('Audio blob created:', audioBlob);
         sendAudioMessage(audioBlob);
     });
 }
 
 function sendAudioMessage(audioBlob) {
+    console.log('Sending audio message...');
     const reader = new FileReader();
     reader.readAsDataURL(audioBlob);
     reader.onloadend = function() {
@@ -149,13 +175,17 @@ function sendAudioMessage(audioBlob) {
             },
             body: JSON.stringify({type: 'voice_message', audio: base64Audio}),
         })
-        .then(response => response.json())
+        .then(response => {
+            console.log('Audio message response status:', response.status);
+            return response.json();
+        })
         .then(data => console.log('Audio sent successfully:', data))
         .catch(error => console.error('Error sending audio:', error));
     }
 }
 
 function addMessageToChat(sender, message) {
+    console.log('Adding message to chat:', sender, message);
     const messageElement = document.createElement('p');
     messageElement.textContent = `${sender}: ${message}`;
     chatDiv.appendChild(messageElement);
@@ -163,16 +193,17 @@ function addMessageToChat(sender, message) {
 }
 
 function playAudio(base64Audio) {
+    console.log('Playing audio...');
     try {
         const audio = new Audio("data:audio/mp3;base64," + base64Audio);
         audio.play();
     } catch (error) {
-        console.error('Ошибка при воспроизведении аудио:', error);
+        console.error('Error playing audio:', error);
     }
 }
 
 function processVoiceOrder(speechText) {
-    console.log('Обработка голосового заказа:', speechText);
+    console.log('Processing voice order:', speechText);
     speechText = speechText.toLowerCase();
     if (speechText.includes('шаурма')) {
         document.getElementById("btn-shawarma").click();
@@ -194,7 +225,7 @@ function processVoiceOrder(speechText) {
 tg.onEvent('viewportChanged', function() {
     console.log('Viewport changed. Checking connection...');
     if (eventSource.readyState === EventSource.CLOSED) {
-        console.log('EventSource закрыт, попытка переподключения...');
+        console.log('EventSource closed, attempting to reconnect...');
         setupEventSource();
     }
 });
