@@ -38,7 +38,6 @@ setupEventSource();
 
 function handleServerMessage(data) {
     console.log('Received server message:', data);
-    console.log('handleServerMessage called with data:', data);
     if (data.type === 'bot_response') {
         addMessageToChat('Бот', data.text);
         if (data.audio) {
@@ -47,8 +46,11 @@ function handleServerMessage(data) {
         if (data.order_confirmation) {
             processVoiceOrder(data.text);
         }
+    } else if (data.type === 'error') {
+        addMessageToChat('Система', `Ошибка: ${data.message}`);
     } else {
         console.warn('Unknown message type:', data.type);
+        addMessageToChat('Система', 'Получено неизвестное сообщение от сервера.');
     }
 }
 
@@ -67,13 +69,19 @@ function sendMessage(text) {
     })
     .then(response => {
         console.log('Response status:', response.status);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
         return response.json();
     })
     .then(data => {
         console.log('Server response:', data);
         // Здесь можно добавить обработку ответа от сервера
     })
-    .catch((error) => console.error('Error sending message:', error));
+    .catch((error) => {
+        console.error('Error sending message:', error);
+        addMessageToChat('Система', 'Произошла ошибка при отправке сообщения. Пожалуйста, попробуйте еще раз.');
+    });
     
     textInput.value = '';
 }
@@ -126,9 +134,18 @@ function toggleVoiceInterface() {
 async function startRecording() {
     console.log('Starting recording...');
     try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const stream = await navigator.mediaDevices.getUserMedia({ 
+            audio: {
+                channelCount: 1,
+                sampleRate: 16000,
+                sampleSize: 16,
+                echoCancellation: true,
+                noiseSuppression: true,
+                autoGainControl: true
+            } 
+        });
         console.log('Got media stream:', stream);
-        mediaRecorder = new MediaRecorder(stream);
+        mediaRecorder = new MediaRecorder(stream, {mimeType: 'audio/webm'});
         audioChunks = [];
 
         mediaRecorder.addEventListener('dataavailable', event => {
@@ -157,7 +174,7 @@ function stopRecording() {
     recordVoiceBtn.textContent = 'Запись';
     mediaRecorder.addEventListener('stop', () => {
         console.log('Processing audio chunks...');
-        const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+        const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
         console.log('Audio blob created:', audioBlob);
         sendAudioMessage(audioBlob);
     });
@@ -165,6 +182,7 @@ function stopRecording() {
 
 function sendAudioMessage(audioBlob) {
     console.log('Sending audio message...');
+    addMessageToChat('Система', 'Отправка аудиосообщения...');
     const reader = new FileReader();
     reader.readAsDataURL(audioBlob);
     reader.onloadend = function() {
@@ -178,10 +196,19 @@ function sendAudioMessage(audioBlob) {
         })
         .then(response => {
             console.log('Audio message response status:', response.status);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
             return response.json();
         })
-        .then(data => console.log('Audio sent successfully:', data))
-        .catch(error => console.error('Error sending audio:', error));
+        .then(data => {
+            console.log('Audio sent successfully:', data);
+            addMessageToChat('Система', 'Аудиосообщение отправлено успешно.');
+        })
+        .catch(error => {
+            console.error('Error sending audio:', error);
+            addMessageToChat('Система', 'Произошла ошибка при отправке аудиосообщения. Пожалуйста, попробуйте еще раз.');
+        });
     }
 }
 
