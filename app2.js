@@ -1,3 +1,5 @@
+import { RealtimeClient } from './src/lib/realtime-api-beta/index.js';
+
 let tg = window.Telegram.WebApp;
 
 tg.expand();
@@ -6,6 +8,16 @@ tg.MainButton.textColor = '#FFFFFF';
 tg.MainButton.color = '#2cab37';
 
 let cart = {};
+
+const client = new RealtimeClient({ apiKey: process.env.OPENAI_API_KEY });
+
+client.updateSession({ 
+    instructions: 'Вы помощник в ресторане шаурмы. Помогайте клиентам с заказами и отвечайте на вопросы о меню.',
+    voice: 'alloy',
+    turn_detection: 'server_vad'
+});
+
+await client.connect();
 
 function updateMainButton() {
     let total = Object.values(cart).reduce((sum, item) => sum + item.price * item.quantity, 0);
@@ -19,7 +31,7 @@ function updateMainButton() {
 
 let selectedFilling = 'chicken';
 const fillingPrices = {
-    'chicken': 25000,
+    'chicken': 35000,
     'beef': 40000,
     'shrimp': 40000,
     'falafel': 25000
@@ -45,11 +57,11 @@ document.getElementById('btn-shawarma').addEventListener('click', function() {
     addToCart('shawarma', `Шаурма ${fillingEmoji}`, fillingPrices[selectedFilling]);
 });
 
-function addToCart(id, name, price) {
+function addToCart(id, name, price, quantity = 1) {
     if (cart[id]) {
-        cart[id].quantity++;
+        cart[id].quantity += quantity;
     } else {
-        cart[id] = { name, price: price * 1000, quantity: 1 };
+        cart[id] = { name, price, quantity };
     }
     updateCartDisplay();
     updateMainButton();
@@ -58,7 +70,7 @@ function addToCart(id, name, price) {
 document.querySelectorAll('.btn').forEach(btn => {
     if (btn) {
         btn.addEventListener('click', function() {
-            let id = this.id.replace('btn', '');
+            let id = this.id.replace('btn-', '');
             let nameElement = this.parentElement.querySelector('h3');
             let priceElement = this.parentElement.querySelector('.price');
             
@@ -142,7 +154,18 @@ function formatPrice(price) {
     return `${(price / 1000).toFixed(0)}k рупий`;
 }
 
-document.getElementById('voiceOrderBtn').addEventListener('click', function() {
+function speakText(text) {
+    if ('speechSynthesis' in window) {
+        let utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = 'ru-RU';
+        speechSynthesis.speak(utterance);
+    } else {
+        console.error('Синтез речи не поддерживается в этом браузере.');
+        tg.showAlert('Голосовой ответ не поддерживается в вашем браузере.');
+    }
+}
+
+document.getElementById('voiceOrderBtn').addEventListener('click', async function() {
     console.log('Voice input button clicked');
     let voiceInput = document.getElementById('voiceInput');
     voiceInput.value = 'Слушаю...';
@@ -155,34 +178,11 @@ document.getElementById('voiceOrderBtn').addEventListener('click', function() {
 
         recognition.start();
 
-        recognition.onresult = function(event) {
+        recognition.onresult = async function(event) {
             let result = event.results[0][0].transcript;
             console.log('Распознанный текст:', result);
             voiceInput.value = result;
-
-            fetch('http://localhost:8000/send-message', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ text: result }),
-            })
-            .then(response => {
-                console.log('Ответ сервера получен:', response);
-                return response.json();
-            })
-            .then(data => {
-                console.log('Данные от сервера:', data);
-                if (data.status === 'success') {
-                    tg.showAlert(data.message);
-                } else {
-                    tg.showAlert('Произошла ошибка: ' + data.message);
-                }
-            })
-            .catch((error) => {
-                console.error('Ошибка при отправке запроса:', error);
-                tg.showAlert('Произошла ошибка при обработке команды: ' + error.message);
-            });
+            processVoiceCommand(result);
         };
 
         recognition.onerror = function(event) {
@@ -200,3 +200,87 @@ document.getElementById('voiceOrderBtn').addEventListener('click', function() {
         tg.showAlert('Голосовой ввод не поддерживается в вашем браузере.');
     }
 });
+
+function processVoiceCommand(command) {
+    if (command.toLowerCase().includes('меню')) {
+        client.sendUserMessageContent([{ type: 'text', text: 'Покажи меню' }]);
+    } else if (command.toLowerCase().includes('заказать')) {
+        client.sendUserMessageContent([{ type: 'text', text: command }]);
+    } else {
+        client.sendUserMessageContent([{ type: 'text', text: command }]);
+    }
+}
+
+client.on('conversation.updated', ({ item, delta }) => {
+    if (item.role === 'assistant' && delta && delta.text) {
+        console.log('Ответ ассистента:', delta.text);
+        tg.showAlert(delta.text);
+        speakText(delta.text);
+    }
+});
+
+client.addTool(
+  {
+    name: 'get_menu',
+    description: 'Получает текущее меню ресторана',
+    parameters: {},
+  },
+  async () => {
+    return {
+      items: [
+        { name: 'Шаурма с курицей', price: fillingPrices['chicken'] },
+        { name: 'Шаурма с говядиной', price: fillingPrices['beef'] },
+        { name: 'Шаурма с креветками', price: fillingPrices['shrimp'] },
+        { name: 'Фалафель', price: fillingPrices['falafel'] },
+        { name: 'Пита', price: 25000 },
+        { name: 'Хумус', price: 25000 },
+        { name: 'Шашлык из курицы', price: 35000 },
+        { name: 'Гёзлеме', price: 25000 },
+        { name: 'Чечевичный суп', price: 20000 },
+      ]
+    };
+  }
+);
+
+client.addTool(
+  {
+    name: 'place_order',
+    description: 'Размещает заказ клиента',
+    parameters: {
+      type: 'object',
+      properties: {
+        items: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              name: { type: 'string' },
+              quantity: { type: 'number' },
+            },
+          },
+        },
+      },
+    },
+  },
+  async ({ items }) => {
+    items.forEach(item => {
+      let price;
+      if (item.name.toLowerCase().includes('шаурма')) {
+        const filling = item.name.split(' ')[2].toLowerCase();
+        price = fillingPrices[filling];
+      } else {
+        const menuItem = document.querySelector(`.item h3:contains('${item.name}')`);
+        if (menuItem) {
+          const priceElement = menuItem.nextElementSibling;
+          price = parseInt(priceElement.textContent.replace(/[^0-9]/g, '')) * 1000;
+        }
+      }
+      if (price) {
+        addToCart(item.name.toLowerCase(), item.name, price, item.quantity);
+      }
+    });
+    updateCartDisplay();
+    updateMainButton();
+    return { status: 'Заказ добавлен в корзину' };
+  }
+);
