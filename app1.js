@@ -49,7 +49,7 @@ function addToCart(id, name, price) {
     if (cart[id]) {
         cart[id].quantity++;
     } else {
-        cart[id] = { name, price: price * 1000, quantity: 1 }; // Умножаем на 1000, так как цены указаны в тысячах
+        cart[id] = { name, price: price * 1000, quantity: 1 };
     }
     updateCartDisplay();
     updateMainButton();
@@ -109,12 +109,6 @@ function removeFromCart(id) {
     updateMainButton();
 }
 
-// document.getElementById('clear-cart').addEventListener('click', function() {
-    // cart = {};
-    // updateCartDisplay();
-    // updateMainButton();
-// });
-
 tg.MainButton.onClick(function() {
     let order = Object.values(cart).map(item => ({
         name: item.name,
@@ -131,7 +125,6 @@ tg.MainButton.onClick(function() {
     }
 });
 
-// Отображение имени пользователя
 let usercard = document.getElementById("usercard");
 let p = document.createElement("p");
 p.innerText = `${tg.initDataUnsafe.user.first_name} ${tg.initDataUnsafe.user.last_name}`;
@@ -148,47 +141,53 @@ document.addEventListener('DOMContentLoaded', function() {
 function formatPrice(price) {
     return `${(price / 1000).toFixed(0)}k рупий`;
 }
-// Существующий код ...
 
-// Добавьте эту функцию в конец файла app1.js
 document.getElementById('voiceOrderBtn').addEventListener('click', function() {
     console.log('Voice input button clicked');
+    let voiceInput = document.getElementById('voiceInput');
+    voiceInput.value = 'Слушаю...';
 
-    // Проверяем поддержку распознавания речи
     if ('webkitSpeechRecognition' in window) {
         let recognition = new webkitSpeechRecognition();
-        recognition.lang = 'ru-RU'; // Устанавливаем язык распознавания
-        recognition.interimResults = false; // Получаем только финальный результат
-        recognition.maxAlternatives = 1; // Получаем только один вариант распознавания
+        recognition.lang = 'ru-RU';
+        recognition.interimResults = false;
+        recognition.maxAlternatives = 1;
 
         recognition.start();
 
         recognition.onresult = function(event) {
             let result = event.results[0][0].transcript;
             console.log('Распознанный текст:', result);
+            voiceInput.value = result;
 
-            // Простая логика обработки голосовых команд
-            if (result.toLowerCase().includes('добавить')) {
-                let items = ['шаурма', 'пита', 'хумус', 'шашлык', 'гёзлеме', 'суп'];
-                for (let item of items) {
-                    if (result.toLowerCase().includes(item)) {
-                        let button = document.querySelector(`button[id^="btn"]:not(#btn-shawarma)`);
-                        if (button) {
-                            button.click();
-                            tg.showAlert(`Добавлено: ${item}`);
-                        }
-                        break;
-                    }
+            fetch('https://ваш-сервер.com/api/voice', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ text: result }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('Ответ сервера:', data);
+                if (data.action === 'add_to_cart') {
+                    addToCart(data.item.id, data.item.name, data.item.price);
+                    tg.showAlert(`Добавлено: ${data.item.name}`);
+                } else if (data.action === 'place_order') {
+                    tg.MainButton.click();
+                } else {
+                    tg.showAlert(data.message || 'Команда не распознана. Попробуйте еще раз.');
                 }
-            } else if (result.toLowerCase().includes('заказать')) {
-                tg.MainButton.click();
-            } else {
-                tg.showAlert('Команда не распознана. Попробуйте еще раз.');
-            }
+            })
+            .catch((error) => {
+                console.error('Ошибка:', error);
+                tg.showAlert('Произошла ошибка при обработке команды.');
+            });
         };
 
         recognition.onerror = function(event) {
             console.error('Ошибка распознавания:', event.error);
+            voiceInput.value = 'Ошибка распознавания речи';
             tg.showAlert('Произошла ошибка при распознавании речи. Попробуйте еще раз.');
         };
 
@@ -197,16 +196,7 @@ document.getElementById('voiceOrderBtn').addEventListener('click', function() {
         };
     } else {
         console.error('Web Speech API не поддерживается в этом браузере.');
+        voiceInput.value = 'Голосовой ввод не поддерживается';
         tg.showAlert('Голосовой ввод не поддерживается в вашем браузере.');
     }
 });
-
-// Конец файла app1.js
-
-
-
-
-
-
-
-
