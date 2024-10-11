@@ -7,24 +7,6 @@ tg.MainButton.color = '#2cab37';
 
 let cart = {};
 
-const CONFIG = {
-    SSE_ENDPOINT: "http://localhost:8000/stream",
-    MESSAGE_ENDPOINT: "http://localhost:8000/send-message",
-    AUDIO_ENDPOINT: "http://localhost:8000/send-message",
-    APP_SETTINGS: {
-        DEFAULT_LANGUAGE: 'ru',
-        RECONNECT_TIMEOUT: 5000
-    },
-    MENU_ITEMS: {
-        SHAWARMA: "shawarma",
-        PITA: "pita",
-        HUMMUS: "hummus",
-        CHICKEN_SHISH: "chicken_shish",
-        GOZLEME: "gozleme",
-        LENTIL_SOUP: "lentil_soup"
-    }
-};
-
 function updateMainButton() {
     let total = Object.values(cart).reduce((sum, item) => sum + item.price * item.quantity, 0);
     if (total > 0) {
@@ -180,44 +162,4 @@ document.getElementById('voiceOrderBtn').addEventListener('click', function() {
 
             fetch(CONFIG.AUDIO_ENDPOINT, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ text: result }),
-            })
-            .then(response => {
-                console.log('Ответ сервера получен:', response);
-                return response.json();
-            })
-            .then(data => {
-                console.log('Данные от сервера:', data);
-                if (data.action === 'add_to_cart') {
-                    addToCart(data.item.id, data.item.name, data.item.price);
-                    tg.showAlert(`Добавлено: ${data.item.name}`);
-                } else if (data.action === 'place_order') {
-                    tg.MainButton.click();
-                } else {
-                    tg.showAlert(data.message || 'Команда не распознана. Попробуйте еще раз.');
-                }
-            })
-            .catch((error) => {
-                console.error('Ошибка при отправке запроса:', error);
-                tg.showAlert('Произошла ошибка при обработке команды: ' + error.message);
-            });
-        };
-
-        recognition.onerror = function(event) {
-            console.error('Ошибка распознавания:', event.error);
-            voiceInput.value = 'Ошибка распознавания речи';
-            tg.showAlert('Произошла ошибка при распознавании речи. Попробуйте еще раз.');
-        };
-
-        recognition.onend = function() {
-            console.log('Распознавание завершено');
-        };
-    } else {
-        console.error('Web Speech API не поддерживается в этом браузере.');
-        voiceInput.value = 'Голосовой ввод не поддерживается';
-        tg.showAlert('Голосовой ввод не поддерживается в вашем браузере.');
-    }
-});
+                headers
