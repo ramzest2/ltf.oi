@@ -162,8 +162,14 @@ document.addEventListener('DOMContentLoaded', function() {
         console.error('Usercard element not found');
     }
 
-    document.querySelector('.filling-btn[data-filling="chicken"]').classList.add('selected');
-    updateShawarmaPrice();
+    const chickenBtn = document.querySelector('.filling-btn[data-filling="chicken"]');
+    if (chickenBtn) {
+        chickenBtn.classList.add('selected');
+        updateShawarmaPrice();
+    } else {
+        console.error('Chicken button not found');
+    }
+    
     updateCartDisplay();
     updateMainButton();
     console.log('Page loaded, MainButton initialized');
@@ -184,6 +190,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     const voiceOrderBtn = document.getElementById('voiceOrderBtn');
+    console.log('Voice order button:', voiceOrderBtn);
     if (voiceOrderBtn) {
         voiceOrderBtn.addEventListener('click', function() {
             console.log('Voice input button clicked');
@@ -202,6 +209,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 recognition.maxAlternatives = 1;
 
                 recognition.start();
+
+                recognition.onstart = function() {
+                    console.log('Распознавание начато');
+                };
 
                 recognition.onresult = function(event) {
                     let result = event.results[0][0].transcript;
