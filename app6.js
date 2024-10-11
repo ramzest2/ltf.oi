@@ -171,8 +171,8 @@ document.getElementById('voiceOrderBtn').addEventListener('click', function() {
             console.log('Распознанный текст:', result);
             voiceInput.value = result;
 
-            // fetch('http://localhost:8000/send-message', {
-            fetch('http://192.168.1.7:8000/send-message', {    
+            fetch('http://localhost:8000/send-message', {
+            // fetch('http://192.168.1.7:8000/send-message', {    
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
