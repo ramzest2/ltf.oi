@@ -19,7 +19,7 @@ function updateMainButton() {
 
 let selectedFilling = 'chicken';
 const fillingPrices = {
-    'chicken': 25000,
+    'chicken': 35000,
     'beef': 40000,
     'shrimp': 40000,
     'falafel': 25000
@@ -49,7 +49,7 @@ function addToCart(id, name, price) {
     if (cart[id]) {
         cart[id].quantity++;
     } else {
-        cart[id] = { name, price: price * 1000, quantity: 1 };
+        cart[id] = { name, price, quantity: 1 };
     }
     updateCartDisplay();
     updateMainButton();
@@ -58,7 +58,7 @@ function addToCart(id, name, price) {
 document.querySelectorAll('.btn').forEach(btn => {
     if (btn) {
         btn.addEventListener('click', function() {
-            let id = this.id.replace('btn', '');
+            let id = this.id.replace('btn-', '');
             let nameElement = this.parentElement.querySelector('h3');
             let priceElement = this.parentElement.querySelector('.price');
             
@@ -142,6 +142,17 @@ function formatPrice(price) {
     return `${(price / 1000).toFixed(0)}k рупий`;
 }
 
+function speakText(text) {
+    if ('speechSynthesis' in window) {
+        let utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = 'ru-RU';
+        speechSynthesis.speak(utterance);
+    } else {
+        console.error('Синтез речи не поддерживается в этом браузере.');
+        tg.showAlert('Голосовой ответ не поддерживается в вашем браузере.');
+    }
+}
+
 document.getElementById('voiceOrderBtn').addEventListener('click', function() {
     console.log('Voice input button clicked');
     let voiceInput = document.getElementById('voiceInput');
@@ -175,6 +186,9 @@ document.getElementById('voiceOrderBtn').addEventListener('click', function() {
                 console.log('Данные от сервера:', data);
                 if (data.status === 'success') {
                     tg.showAlert(data.message);
+                    if (data.voice_response) {
+                        speakText(data.voice_response);
+                    }
                 } else {
                     tg.showAlert('Произошла ошибка: ' + data.message);
                 }
