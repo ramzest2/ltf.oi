@@ -7,24 +7,6 @@ tg.MainButton.color = '#2cab37';
 
 let cart = {};
 
-const CONFIG = {
-    SSE_ENDPOINT: "http://localhost:8000/stream",
-    MESSAGE_ENDPOINT: "http://localhost:8000/send-message",
-    AUDIO_ENDPOINT: "http://localhost:8000/send-message",
-    APP_SETTINGS: {
-        DEFAULT_LANGUAGE: 'ru',
-        RECONNECT_TIMEOUT: 5000
-    },
-    MENU_ITEMS: {
-        SHAWARMA: "shawarma",
-        PITA: "pita",
-        HUMMUS: "hummus",
-        CHICKEN_SHISH: "chicken_shish",
-        GOZLEME: "gozleme",
-        LENTIL_SOUP: "lentil_soup"
-    }
-};
-
 function updateMainButton() {
     let total = Object.values(cart).reduce((sum, item) => sum + item.price * item.quantity, 0);
     if (total > 0) {
@@ -178,7 +160,7 @@ document.getElementById('voiceOrderBtn').addEventListener('click', function() {
             console.log('Распознанный текст:', result);
             voiceInput.value = result;
 
-            fetch(CONFIG.AUDIO_ENDPOINT, {
+            fetch('http://localhost:8000/send-message', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -191,13 +173,10 @@ document.getElementById('voiceOrderBtn').addEventListener('click', function() {
             })
             .then(data => {
                 console.log('Данные от сервера:', data);
-                if (data.action === 'add_to_cart') {
-                    addToCart(data.item.id, data.item.name, data.item.price);
-                    tg.showAlert(`Добавлено: ${data.item.name}`);
-                } else if (data.action === 'place_order') {
-                    tg.MainButton.click();
+                if (data.status === 'success') {
+                    tg.showAlert(data.message);
                 } else {
-                    tg.showAlert(data.message || 'Команда не распознана. Попробуйте еще раз.');
+                    tg.showAlert('Произошла ошибка: ' + data.message);
                 }
             })
             .catch((error) => {
