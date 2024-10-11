@@ -88,7 +88,6 @@ body {
     background-color: #45a049;
 }
 
-/* Новые стили для интерфейса голосового помощника */
 .voice-interface {
     position: fixed;
     bottom: 0;
@@ -139,7 +138,6 @@ body {
     background: #45a049;
 }
 
-/* Медиа-запрос для мобильных устройств */
 @media (max-width: 600px) {
     .inner {
         grid-template-columns: 1fr;
