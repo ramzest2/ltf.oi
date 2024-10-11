@@ -148,6 +148,60 @@ document.addEventListener('DOMContentLoaded', function() {
 function formatPrice(price) {
     return `${(price / 1000).toFixed(0)}k рупий`;
 }
+// Существующий код ...
+
+// Добавьте эту функцию в конец файла app1.js
+document.getElementById('voiceOrderBtn').addEventListener('click', function() {
+    console.log('Voice input button clicked');
+
+    // Проверяем поддержку распознавания речи
+    if ('webkitSpeechRecognition' in window) {
+        let recognition = new webkitSpeechRecognition();
+        recognition.lang = 'ru-RU'; // Устанавливаем язык распознавания
+        recognition.interimResults = false; // Получаем только финальный результат
+        recognition.maxAlternatives = 1; // Получаем только один вариант распознавания
+
+        recognition.start();
+
+        recognition.onresult = function(event) {
+            let result = event.results[0][0].transcript;
+            console.log('Распознанный текст:', result);
+
+            // Простая логика обработки голосовых команд
+            if (result.toLowerCase().includes('добавить')) {
+                let items = ['шаурма', 'пита', 'хумус', 'шашлык', 'гёзлеме', 'суп'];
+                for (let item of items) {
+                    if (result.toLowerCase().includes(item)) {
+                        let button = document.querySelector(`button[id^="btn"]:not(#btn-shawarma)`);
+                        if (button) {
+                            button.click();
+                            tg.showAlert(`Добавлено: ${item}`);
+                        }
+                        break;
+                    }
+                }
+            } else if (result.toLowerCase().includes('заказать')) {
+                tg.MainButton.click();
+            } else {
+                tg.showAlert('Команда не распознана. Попробуйте еще раз.');
+            }
+        };
+
+        recognition.onerror = function(event) {
+            console.error('Ошибка распознавания:', event.error);
+            tg.showAlert('Произошла ошибка при распознавании речи. Попробуйте еще раз.');
+        };
+
+        recognition.onend = function() {
+            console.log('Распознавание завершено');
+        };
+    } else {
+        console.error('Web Speech API не поддерживается в этом браузере.');
+        tg.showAlert('Голосовой ввод не поддерживается в вашем браузере.');
+    }
+});
+
+// Конец файла app1.js
 
 
 
