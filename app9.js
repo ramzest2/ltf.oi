@@ -7,7 +7,7 @@ tg.MainButton.textColor = '#FFFFFF';
 tg.MainButton.color = '#2cab37';
 
 // Инициализация Socket.IO
-const socket = io('http://localhost:8000'); // Замените на актуальный адрес вашего сервера
+const socket = io('http://localhost:3000'); // Замените на актуальный адрес вашего сервера
 
 socket.on('connect', () => {
     console.log('Connected to server');
