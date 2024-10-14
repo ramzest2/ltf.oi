@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style.css">
+    <title>Меню кафе</title>
+</head>
+<body>
+    <div class="container">
+        <div class="inner">
+            <div class="item" id="shawarma-item">
+                <img src="shawarma.jpg" alt="Шаурма" class="img">
+                <h3>Шаурма</h3>
+                <p class="price" id="shawarma-price">25k рупий.</p>
+                <div class="filling-buttons">
+                    <button class="filling-btn" data-filling="chicken" data-emoji="🐓">🐓</button>
+                    <button class="filling-btn" data-filling="beef" data-emoji="🐮">🐮</button>
+                    <button class="filling-btn" data-filling="shrimp" data-emoji="🦐">🦐</button>
+                    <button class="filling-btn" data-filling="falafel" data-emoji="🌱">🌱</button>
+                </div>
+                <button class="btn" id="btn-shawarma">Добавить</button>
+            </div>
+            <div class="item">
+                <img src="pita.jpg" alt="Пита" class="img">
+                <h3>Пита</h3>
+                <p class="price" id="price-2">25k рупий.</p>
+                <button class="btn" id="btn2">Добавить</button>
+            </div>
+            <div class="item">
+                <img src="hummus.jpg" alt="Хумус" class="img">
+                <h3>Хумус</h3>
+                <p class="price" id="price-3">25k рупий.</p>
+                <button class="btn" id="btn3">Добавить</button>
+            </div>
+            <div class="item">
+                <img src="chicken_shish.jpg" alt="Шашлык из курицы" class="img">
+                <h3>Шашлык из курицы</h3>
+                <p class="price" id="price-4">35k рупий.</p>
+                <button class="btn" id="btn4">Добавить</button>
+            </div>
+            <div class="item">
+                <img src="gozleme.jpg" alt="Гёзлеме" class="img">
+                <h3>Гёзлеме</h3>
+                <p class="price" id="price-5">25k рупий.</p>
+                <button class="btn" id="btn5">Добавить</button>
+            </div>
+            <div class="item">
+                <img src="lentil_soup.jpg" alt="Чечевичный суп" class="img">
+                <h3>Чечевичный суп</h3>
+                <p class="price" id="price-6">20k рупий.</p>
+                <button class="btn" id="btn6">Добавить</button>
+            </div>
+        </div>
+    </div>
+    <div class="usercard" id="usercard"></div>
+    
+    <div class="voice-input-container">
+        <button id="voiceOrderBtn" class="voice-order-btn">🎤</button>
+        <input type="text" id="voiceInput" placeholder="Результат голосового ввода" readonly>
+        <button id="testSoundBtn" class="test-sound-btn">🔊 Проверить звук</button>
+    </div>
+    
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="app15.js"></script>
+</body>
+</html>
