@@ -6,7 +6,7 @@ tg.expand();
 tg.MainButton.textColor = '#FFFFFF';
 tg.MainButton.color = '#2cab37';
 
-// Инициализация Socket.IO
+// Инициализация Socket.Id
 const socket = io('http://localhost:3000'); // Замените на актуальный адрес вашего сервера
 
 socket.on('connect', () => {
