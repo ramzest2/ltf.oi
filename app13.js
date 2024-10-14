@@ -24,18 +24,20 @@ socket.onmessage = (event) => {
         const data = JSON.parse(event.data);
         console.log('Получено сообщение:', data);
         if (data.type === 'ai-response') {
-            if (data.content.type === 'audio') {
+            if (data.content && data.content.audio) {
                 console.log('Получены аудиоданные:', data.content.audio);
-                if (data.content.audio && data.content.audio.length > 0) {
+                if (Array.isArray(data.content.audio) && data.content.audio.length > 0) {
                     const audioArray = new Int16Array(data.content.audio);
                     playAudio(audioArray);
                 } else {
-                    console.error('Получены пустые аудиоданные');
+                    console.error('Получены некорректные аудиоданные');
+                    tg.showAlert('Ошибка: получены некорректные аудиоданные');
                 }
-            } else if (data.content.error) {
-                tg.showAlert(data.content.error);
-            } else if (data.content.message) {
-                tg.showAlert(data.content.message);
+            } else {
+                console.error('Аудиоданные отсутствуют в ответе');
+                tg.showAlert('Ошибка: аудиоданные отсутствуют в ответе');
+            }
+            if (data.content.message) {
                 processAIResponse(data.content.message);
             }
         }
@@ -318,20 +320,35 @@ function placeOrder() {
 }
 
 function playAudio(audioData) {
+    if (!audioData || audioData.length === 0) {
+        console.error('Получены пустые аудиоданные');
+        return;
+    }
+
     try {
         const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        const audioBuffer = audioContext.createBuffer(1, audioData.length, 44100); // Предполагаем частоту дискретизации 44.1 кГц
+        const audioBuffer = audioContext.createBuffer(1, audioData.length, 44100);
         const channelData = audioBuffer.getChannelData(0);
+        
         for (let i = 0; i < audioData.length; i++) {
             channelData[i] = audioData[i] / 32768.0; // Нормализация Int16 в Float32
         }
+        
         const source = audioContext.createBufferSource();
         source.buffer = audioBuffer;
         source.connect(audioContext.destination);
         source.start();
-        console.log('Audio playback started');
+        
+        console.log('Начало воспроизведения аудио');
     } catch (error) {
-        console.error('Error playing audio:', error);
-        tg.showAlert('Ошибка воспроизведения аудио: ' + error.message);
+        console.error('Ошибка при воспроизведении аудио:', error);
+        tg.showAlert('Произошла ошибка при воспроизведении аудио: ' + error.message);
     }
 }
+
+// Добавляем обработчик для создания AudioContext после взаимодействия с пользователем
+document.addEventListener('click', function() {
+    if (!window.audioContext) {
+        window.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    }
+});
