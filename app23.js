@@ -13,6 +13,7 @@ window.addEventListener('unhandledrejection', function(event) {
 
 let tg;
 let socket;
+let cart = {};
 
 class AudioQueueManager {
     constructor() {
@@ -134,6 +135,25 @@ function connectWebSocket() {
     return socket;
 }
 
+function playTestSound() {
+    initAudioContext();
+    const sampleRate = audioQueue.audioContext.sampleRate;
+    const duration = 0.5; // длительность звука в секундах
+    const frequency = 440; // частота звука в герцах (ля первой октавы)
+
+    // Создаем буфер с тестовым звуком
+    const samples = sampleRate * duration;
+    const testBuffer = new Float32Array(samples);
+    for (let i = 0; i < samples; i++) {
+        testBuffer[i] = Math.sin(2 * Math.PI * frequency * i / sampleRate);
+    }
+
+    // Добавляем тестовый звук в очередь воспроизведения
+    audioQueue.addAudioToQueue(testBuffer);
+
+    console.log('Тестовый звук добавлен в очередь воспроизведения');
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     console.log('DOM fully loaded');
 
@@ -154,8 +174,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         socket = connectWebSocket();
-
-        let cart = {};
 
         const fillingPrices = {
             'chicken': 25000,
@@ -439,17 +457,6 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
 
-        function playTestSound() {
-            initAudioContext();
-            const oscillator = audioQueue.audioContext.createOscillator();
-            oscillator.type = 'sine';
-            oscillator.frequency.setValueAtTime(440, audioQueue.audioContext.currentTime); // 440 Hz
-            oscillator.connect(audioQueue.audioContext.destination);
-            oscillator.start();
-            oscillator.stop(audioQueue.audioContext.currentTime + 0.5); // Звучит 0.5 секунды
-            console.log('Тестовый звук воспроизведен');
-        }
-
         const testSoundBtn = document.getElementById('testSoundBtn');
         if (testSoundBtn) {
             console.log('Test sound button found');
@@ -462,7 +469,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         // Добавляем обработчик для создания AudioContext после взаимодействия с пользователем
-        document.addEventListener('click', initAudioContext);
+        document.addEventListener('click', initAudioContext, { once: true });
 
     } else {
         console.error('Telegram WebApp API not found');
