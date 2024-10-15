@@ -5,6 +5,7 @@ window.onerror = function(message, source, lineno, colno, error) {
 
 // Обработчик необработанных отклонений промисов
 window.addEventListener('unhandledrejection', function(event) {
+    console.error('Необработанное отклонение промиса:', event.reason);
     if (event.reason && event.reason.type === 'BOT_RESPONSE_TIMEOUT') {
         console.error('Превышено время ожидания ответа от бота');
         tg.showAlert('Превышено время ожидания ответа. Пожалуйста, попробуйте еще раз.');
@@ -20,23 +21,29 @@ class AudioQueueManager {
         this.audioQueue = [];
         this.isPlaying = false;
         this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        console.log('AudioQueueManager создан, состояние AudioContext:', this.audioContext.state);
     }
 
     addAudioToQueue(audioData) {
+        console.log('Добавление аудио в очередь, длина данных:', audioData.length);
         this.audioQueue.push(audioData);
         if (!this.isPlaying) {
+            console.log('Начало воспроизведения очереди');
             this.playNextChunk();
         }
     }
 
     async playNextChunk() {
+        console.log('Начало playNextChunk, длина очереди:', this.audioQueue.length);
         if (this.audioQueue.length === 0) {
             this.isPlaying = false;
+            console.log('Очередь пуста, воспроизведение остановлено');
             return;
         }
 
         this.isPlaying = true;
         const audioData = this.audioQueue.shift();
+        console.log('Получен аудиофрагмент, длина:', audioData.length);
 
         const audioBuffer = this.audioContext.createBuffer(1, audioData.length, this.audioContext.sampleRate);
         audioBuffer.copyToChannel(audioData, 0);
@@ -45,21 +52,26 @@ class AudioQueueManager {
         source.buffer = audioBuffer;
         source.connect(this.audioContext.destination);
         source.onended = () => {
+            console.log('Воспроизведение фрагмента завершено');
             this.playNextChunk();
         };
         source.start();
+        console.log('Начато воспроизведение фрагмента');
     }
 }
 
 let audioQueue = new AudioQueueManager();
 
 function initAudioContext() {
+    console.log('Инициализация AudioContext');
     if (audioQueue.audioContext.state !== 'running') {
         audioQueue.audioContext.resume().then(() => {
             console.log('AudioContext возобновлен');
         }).catch(error => {
             console.error('Ошибка при возобновлении AudioContext:', error);
         });
+    } else {
+        console.log('AudioContext уже в состоянии running');
     }
 }
 
@@ -74,6 +86,7 @@ function base64ToArrayBuffer(base64) {
 }
 
 function processAudioChunk(int16Data) {
+    console.log('Обработка аудиофрагмента, длина:', int16Data.length);
     // Преобразование Int16Array в Float32Array
     const float32Data = new Float32Array(int16Data.length);
     for (let i = 0; i < int16Data.length; i++) {
@@ -95,7 +108,7 @@ function connectWebSocket() {
     socket.onmessage = async (event) => {
         try {
             if (event.data instanceof ArrayBuffer) {
-                // Если получены бинарные данные, предполагаем, что это аудио
+                console.log('Получены бинарные данные, длина:', event.data.byteLength);
                 processAudioChunk(new Int16Array(event.data));
             } else {
                 const data = JSON.parse(event.data);
@@ -136,22 +149,35 @@ function connectWebSocket() {
 }
 
 function playTestSound() {
+    console.log('Начало функции playTestSound');
     initAudioContext();
+    console.log('AudioContext состояние:', audioQueue.audioContext.state);
+    
     const sampleRate = audioQueue.audioContext.sampleRate;
-    const duration = 0.5; // длительность звука в секундах
-    const frequency = 440; // частота звука в герцах (ля первой октавы)
+    console.log('Частота дискретизации:', sampleRate);
+    
+    const duration = 0.5;
+    const frequency = 440;
 
-    // Создаем буфер с тестовым звуком
     const samples = sampleRate * duration;
     const testBuffer = new Float32Array(samples);
     for (let i = 0; i < samples; i++) {
         testBuffer[i] = Math.sin(2 * Math.PI * frequency * i / sampleRate);
     }
 
-    // Добавляем тестовый звук в очередь воспроизведения
-    audioQueue.addAudioToQueue(testBuffer);
+    console.log('Тестовый буфер создан, длина:', testBuffer.length);
 
-    console.log('Тестовый звук добавлен в очередь воспроизведения');
+    audioQueue.addAudioToQueue(testBuffer);
+    console.log('Тестовый звук добавлен в очередь');
+    
+    // Попробуем воспроизвести звук напрямую
+    const buffer = audioQueue.audioContext.createBuffer(1, testBuffer.length, sampleRate);
+    buffer.copyToChannel(testBuffer, 0);
+    const source = audioQueue.audioContext.createBufferSource();
+    source.buffer = buffer;
+    source.connect(audioQueue.audioContext.destination);
+    source.start();
+    console.log('Попытка прямого воспроизведения звука');
 }
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -174,6 +200,8 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         socket = connectWebSocket();
+
+        let cart = {};
 
         const fillingPrices = {
             'chicken': 25000,
