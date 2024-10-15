@@ -3,6 +3,21 @@ window.onerror = function(message, source, lineno, colno, error) {
     console.error('Глобальная ошибка:', message, 'Источник:', source, 'Строка:', lineno, 'Колонка:', colno, 'Объект ошибки:', error);
 };
 
+let audioContext;
+
+function initAudioContext() {
+    if (!audioContext) {
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (audioContext.state !== 'running') {
+        audioContext.resume().then(() => {
+            console.log('AudioContext возобновлен');
+        }).catch(error => {
+            console.error('Ошибка при возобновлении AudioContext:', error);
+        });
+    }
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     console.log('DOM fully loaded');
 
@@ -33,26 +48,15 @@ document.addEventListener('DOMContentLoaded', function() {
             try {
                 const data = JSON.parse(event.data);
                 console.log('Получено сообщение:', data);
-                if (data.type === 'ai-response') {
-                    if (data.content && data.content.audio) {
-                        console.log('Получены аудиоданные:', data.content.audio);
-                        console.log('Тип аудиоданных:', typeof data.content.audio);
-                        console.log('Длина аудиоданных:', data.content.audio.length);
-                        console.log('Пример значений:', data.content.audio.slice(0, 10));
-                        if (Array.isArray(data.content.audio) && data.content.audio.length > 0) {
-                            const audioArray = new Int16Array(data.content.audio);
-                            playAudio(audioArray);
-                        } else {
-                            console.error('Получены некорректные аудиоданные');
-                            tg.showAlert('Ошибка: получены некорректные аудиоданные');
-                        }
-                    } else {
-                        console.error('Аудиоданные отсутствуют в ответе');
-                        tg.showAlert('Ошибка: аудиоданные отсутствуют в ответе');
-                    }
-                    if (data.content.message) {
-                        processAIResponse(data.content.message);
-                    }
+                if (data.type === 'ai-response-delta' && data.formatted && data.formatted.audio) {
+                    console.log('Получены аудиоданные:', data.formatted.audio);
+                    playAudio(new Int16Array(data.formatted.audio));
+                } else if (data.type === 'ai-response' && data.content && data.content[0] && data.content[0].type === 'audio') {
+                    console.log('Получен полный ответ с аудио');
+                    // Здесь можно обработать полный ответ, если нужно
+                }
+                if (data.content && data.content.message) {
+                    processAIResponse(data.content.message);
                 }
             } catch (error) {
                 console.error('Ошибка при обработке полученного сообщения:', error);
@@ -198,80 +202,74 @@ document.addEventListener('DOMContentLoaded', function() {
             return `${(price / 1000).toFixed(0)}k рупий`;
         }
 
-        const voiceOrderBtn = document.getElementById('voiceOrderBtn');
-        if (voiceOrderBtn) {
-            console.log('Voice order button found');
-            voiceOrderBtn.addEventListener('click', function() {
-                console.log('Voice order button clicked');
-                let voiceInput = document.getElementById('voiceInput');
-                voiceInput.value = 'Слушаю...';
-                this.disabled = true;
-                this.textContent = 'Слушаю...';
+        document.getElementById('voiceOrderBtn').addEventListener('click', function() {
+            console.log('Нажата кнопка голосового ввода');
+            let voiceInput = document.getElementById('voiceInput');
+            voiceInput.value = 'Слушаю...';
+            this.disabled = true;
+            this.textContent = 'Слушаю...';
 
-                if ('webkitSpeechRecognition' in window) {
-                    let recognition = new webkitSpeechRecognition();
-                    recognition.lang = 'ru-RU';
-                    recognition.interimResults = false;
-                    recognition.maxAlternatives = 1;
+            if ('webkitSpeechRecognition' in window) {
+                let recognition = new webkitSpeechRecognition();
+                recognition.lang = 'ru-RU';
+                recognition.interimResults = false;
+                recognition.maxAlternatives = 1;
 
-                    recognition.start();
+                recognition.start();
 
-                    recognition.onresult = function(event) {
-                        let result = event.results[0][0].transcript;
-                        console.log('Распознанный текст:', result);
-                        voiceInput.value = result;
+                recognition.onresult = function(event) {
+                    let result = event.results[0][0].transcript;
+                    console.log('Распознанный текст:', result);
+                    voiceInput.value = result;
 
-                        if (socket.readyState === WebSocket.OPEN) {
-                            socket.send(JSON.stringify({ type: 'user-message', content: result }));
-                        } else {
-                            console.error('WebSocket не открыт. Статус:', socket.readyState);
-                            tg.showAlert('Ошибка отправки сообщения. Проверьте соединение и попробуйте еще раз.');
-                        }
-                    };
+                    if (socket.readyState === WebSocket.OPEN) {
+                        socket.send(JSON.stringify({ type: 'user-message', content: result }));
+                    } else {
+                        console.error('WebSocket не открыт. Статус:', socket.readyState);
+                        tg.showAlert('Ошибка отправки сообщения. Проверьте соединение и попробуйте еще раз.');
+                    }
+                };
 
-                    recognition.onerror = function(event) {
-                        console.error('Ошибка распознавания речи:', event.error);
-                        let errorMessage = 'Произошла ошибка при распознавании речи.';
-                        switch(event.error) {
-                            case 'network':
-                                errorMessage += ' Проверьте подключение к интернету.';
-                                break;
-                            case 'not-allowed':
-                            case 'service-not-allowed':
-                                errorMessage += ' Убедитесь, что вы разрешили доступ к микрофону.';
-                                break;
-                            case 'aborted':
-                                errorMessage += ' Распознавание было прервано.';
-                                break;
-                            case 'no-speech':
-                                errorMessage += ' Речь не обнаружена. Попробуйте говорить громче.';
-                                break;
-                            case 'audio-capture':
-                                errorMessage += ' Проблема с захватом аудио. Проверьте ваш микрофон.';
-                                break;
-                            default:
-                                errorMessage += ' Попробуйте еще раз.';
-                        }
-                        voiceInput.value = 'Ошибка распознавания речи';
-                        tg.showAlert(errorMessage);
-                    };
+                recognition.onerror = function(event) {
+                    console.error('Ошибка распознавания речи:', event.error);
+                    let errorMessage = 'Произошла ошибка при распознавании речи.';
+                    switch(event.error) {
+                        case 'network':
+                            errorMessage += ' Проверьте подключение к интернету.';
+                            break;
+                        case 'not-allowed':
+                        case 'service-not-allowed':
+                            errorMessage += ' Убедитесь, что вы разрешили доступ к микрофону.';
+                            break;
+                        case 'aborted':
+                            errorMessage += ' Распознавание было прервано.';
+                            break;
+                        case 'no-speech':
+                            errorMessage += ' Речь не обнаружена. Попробуйте говорить громче.';
+                            break;
+                        case 'audio-capture':
+                            errorMessage += ' Проблема с захватом аудио. Проверьте ваш микрофон.';
+                            break;
+                        default:
+                            errorMessage += ' Попробуйте еще раз.';
+                    }
+                    voiceInput.value = 'Ошибка распознавания речи';
+                    tg.showAlert(errorMessage);
+                };
 
-                    recognition.onend = function() {
-                        console.log('Распознавание завершено');
-                        document.getElementById('voiceOrderBtn').disabled = false;
-                        document.getElementById('voiceOrderBtn').textContent = 'Голосовой ввод';
-                    };
-                } else {
-                    console.error('Web Speech API не поддерживается в этом браузере.');
-                    voiceInput.value = 'Голосовой ввод не поддерживается';
-                    tg.showAlert('Голосовой ввод не поддерживается в вашем браузере. Попробуйте использовать другой браузер или устройство.');
-                    this.disabled = false;
-                    this.textContent = 'Голосовой ввод';
-                }
-            });
-        } else {
-            console.error('Voice order button not found');
-        }
+                recognition.onend = function() {
+                    console.log('Распознавание завершено');
+                    document.getElementById('voiceOrderBtn').disabled = false;
+                    document.getElementById('voiceOrderBtn').textContent = 'Голосовой ввод';
+                };
+            } else {
+                console.error('Web Speech API не поддерживается в этом браузере.');
+                voiceInput.value = 'Голосовой ввод не поддерживается';
+                tg.showAlert('Голосовой ввод не поддерживается в вашем браузере. Попробуйте использовать другой браузер или устройство.');
+                this.disabled = false;
+                this.textContent = 'Голосовой ввод';
+            }
+        });
 
         function processAIResponse(response) {
             console.log('Processing AI response:', response);
@@ -342,13 +340,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
 
-            if (!(audioData instanceof Int16Array)) {
-                console.error('Неверный тип аудиоданных. Ожидается Int16Array.');
-                return;
-            }
-
             try {
-                const audioContext = window.audioContext || new (window.AudioContext || window.webkitAudioContext)();
+                initAudioContext();
                 const audioBuffer = audioContext.createBuffer(1, audioData.length, 44100);
                 const channelData = audioBuffer.getChannelData(0);
                 
@@ -361,25 +354,24 @@ document.addEventListener('DOMContentLoaded', function() {
                 source.connect(audioContext.destination);
                 source.start();
                 
-                console.log('Начало воспроизведения аудио');
+                console.log('Аудио успешно запущено');
             } catch (error) {
                 console.error('Ошибка при воспроизведении аудио:', error);
                 tg.showAlert('Произошла ошибка при воспроизведении аудио: ' + error.message);
             }
         }
 
-        // Функция для воспроизведения тестового звука
         function playTestSound() {
-            const audioContext = window.audioContext || new (window.AudioContext || window.webkitAudioContext)();
+            initAudioContext();
             const oscillator = audioContext.createOscillator();
             oscillator.type = 'sine';
             oscillator.frequency.setValueAtTime(440, audioContext.currentTime); // 440 Hz
             oscillator.connect(audioContext.destination);
             oscillator.start();
             oscillator.stop(audioContext.currentTime + 0.5); // Звучит 0.5 секунды
+            console.log('Тестовый звук воспроизведен');
         }
 
-        // Добавляем кнопку для тестирования звука
         const testSoundBtn = document.getElementById('testSoundBtn');
         if (testSoundBtn) {
             console.log('Test sound button found');
@@ -392,11 +384,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         // Добавляем обработчик для создания AudioContext после взаимодействия с пользователем
-        document.addEventListener('click', function() {
-            if (!window.audioContext) {
-                window.audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            }
-        });
+        document.addEventListener('click', initAudioContext);
 
     } else {
         console.error('Telegram WebApp API not found');
