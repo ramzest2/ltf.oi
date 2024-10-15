@@ -3,7 +3,16 @@ window.onerror = function(message, source, lineno, colno, error) {
     console.error('Глобальная ошибка:', message, 'Источник:', source, 'Строка:', lineno, 'Колонка:', colno, 'Объект ошибки:', error);
 };
 
+// Обработчик необработанных отклонений промисов
+window.addEventListener('unhandledrejection', function(event) {
+    if (event.reason && event.reason.type === 'BOT_RESPONSE_TIMEOUT') {
+        console.error('Превышено время ожидания ответа от бота');
+        tg.showAlert('Превышено время ожидания ответа. Пожалуйста, попробуйте еще раз.');
+    }
+});
+
 let audioContext;
+let audioBuffer = [];
 
 function initAudioContext() {
     if (!audioContext) {
@@ -49,11 +58,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 const data = JSON.parse(event.data);
                 console.log('Получено сообщение:', data);
                 if (data.type === 'ai-response-delta' && data.formatted && data.formatted.audio) {
-                    console.log('Получены аудиоданные:', data.formatted.audio);
-                    playAudio(new Int16Array(data.formatted.audio));
+                    console.log('Получены частичные аудиоданные');
+                    audioBuffer = audioBuffer.concat(data.formatted.audio);
                 } else if (data.type === 'ai-response' && data.content && data.content[0] && data.content[0].type === 'audio') {
                     console.log('Получен полный ответ с аудио');
-                    // Здесь можно обработать полный ответ, если нужно
+                    if (audioBuffer.length > 0) {
+                        playAudio(new Int16Array(audioBuffer));
+                        audioBuffer = []; // Очистка буфера после воспроизведения
+                    }
                 }
                 if (data.content && data.content.message) {
                     processAIResponse(data.content.message);
@@ -339,6 +351,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.error('Получены пустые аудиоданные');
                 return;
             }
+
+            console.log('Начало воспроизведения аудио, длина данных:', audioData.length);
 
             try {
                 initAudioContext();
