@@ -81,11 +81,24 @@ function playAudio(arrayBuffer) {
         return;
     }
 
-    console.log('Начало воспроизведения аудио, длина данных:', arrayBuffer.byteLength);
+    console.log('Начало обработки аудио, длина данных:', arrayBuffer.byteLength);
 
     try {
         initAudioContext();
-        audioContext.decodeAudioData(arrayBuffer, 
+
+        // Декодирование WAV-заголовка
+        const dataView = new DataView(arrayBuffer);
+        const sampleRate = dataView.getUint32(24, true);
+        const numChannels = dataView.getUint16(22, true);
+        const bitsPerSample = dataView.getUint16(34, true);
+
+        console.log('Аудио параметры:', { sampleRate, numChannels, bitsPerSample });
+
+        // Извлечение PCM данных (пропускаем 44 байта WAV-заголовка)
+        const pcmData = arrayBuffer.slice(44);
+
+        // Декодирование PCM данных
+        audioContext.decodeAudioData(pcmData, 
             (audioBuffer) => {
                 const source = audioContext.createBufferSource();
                 source.buffer = audioBuffer;
@@ -104,8 +117,8 @@ function playAudio(arrayBuffer) {
             }
         );
     } catch (error) {
-        console.error('Ошибка при воспроизведении аудио:', error);
-        tg.showAlert('Произошла ошибка при воспроизведении аудио: ' + error.message);
+        console.error('Ошибка при обработке аудио:', error);
+        tg.showAlert('Произошла ошибка при обработке аудио: ' + error.message);
     }
 }
 
@@ -314,143 +327,3 @@ document.addEventListener('DOMContentLoaded', function() {
                     document.getElementById('voiceOrderBtn').disabled = false;
                     document.getElementById('voiceOrderBtn').textContent = 'Голосовой ввод';
                 };
-
-                recognition.onaudiostart = function() {
-                    console.log('Начало записи аудио');
-                    // Создайте AudioContext и подключите анализатор
-                    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                    const analyser = audioContext.createAnalyser();
-                    analyser.fftSize = 256;
-                    const bufferLength = analyser.frequencyBinCount;
-                    const dataArray = new Uint8Array(bufferLength);
-
-                    // Получите поток с микрофона
-                    navigator.mediaDevices.getUserMedia({ audio: true })
-                        .then(stream => {
-                            const source = audioContext.createMediaStreamSource(stream);
-                            source.connect(analyser);
-
-                            function updateLevel() {
-                                analyser.getByteFrequencyData(dataArray);
-                                let sum = dataArray.reduce((a, b) => a + b);
-                                let average = sum / bufferLength;
-                                let level = average / 255; // нормализуем до диапазона 0-1
-                                updateVoiceActivityDisplay(level);
-                                requestAnimationFrame(updateLevel);
-                            }
-                            updateLevel();
-                        })
-                        .catch(err => console.error('Ошибка при получении доступа к микрофону:', err));
-                };
-            } else {
-                console.error('Web Speech API не поддерживается в этом браузере.');
-                voiceInput.value = 'Голосовой ввод не поддерживается';
-                tg.showAlert('Голосовой ввод не поддерживается в вашем браузере. Попробуйте использовать другой браузер или устройство.');
-                this.disabled = false;
-                this.textContent = 'Голосовой ввод';
-            }
-        });
-
-        function processAIResponse(response) {
-            console.log('Processing AI response:', response);
-            if (typeof response === 'string') {
-                if (response.toLowerCase().includes('добавить в корзину')) {
-                    const match = response.match(/добавить в корзину (\d+) (.+)/i);
-                    if (match) {
-                        const quantity = parseInt(match[1]);
-                        const item = match[2];
-                        addToCartFromVoice(item, quantity);
-                    }
-                } else if (response.toLowerCase().includes('оформить заказ')) {
-                    placeOrder();
-                }
-            }
-        }
-
-        function addToCartFromVoice(item, quantity) {
-            const menuItem = findMenuItem(item);
-            if (menuItem) {
-                addToCart(menuItem.id, menuItem.name, menuItem.price, quantity);
-                tg.showAlert(`Добавлено в корзину: ${menuItem.name} x${quantity}`);
-            } else {
-                tg.showAlert(`Товар "${item}" не найден в меню`);
-            }
-        }
-
-        function findMenuItem(itemName) {
-            const menu = [
-                {id: 'shawarma_chicken', name: 'Шаурма с курицей', price: 25},
-                {id: 'shawarma_beef', name: 'Шаурма с говядиной', price: 40},
-                {id: 'shawarma_shrimp', name: 'Шаурма с креветками', price: 40},
-                {id: 'falafel', name: 'Фалафель', price: 25},
-                {id: 'pita', name: 'Пита', price: 25},
-                {id: 'hummus', name: 'Хумус', price: 25},
-                {id: 'chicken_kebab', name: 'Шашлык из курицы', price: 35},
-                {id: 'gozleme', name: 'Гёзлеме', price: 25},
-                {id: 'lentil_soup', name: 'Чечевичный суп', price: 20},
-            ];
-            return menu.find(item => item.name.toLowerCase().includes(itemName.toLowerCase()));
-        }
-
-        function placeOrder() {
-            let order = Object.values(cart).map(item => ({
-                name: item.name,
-                quantity: item.quantity,
-                price: item.price
-            }));
-            let total = Object.values(cart).reduce((sum, item) => sum + item.price * item.quantity, 0);
-            
-            try {
-                tg.sendData(JSON.stringify({ order, total }));
-                tg.showAlert('Заказ оформлен!');
-                cart = {};
-                updateCartDisplay();
-                updateMainButton();
-            } catch (error) {
-                console.error('Error sending data to bot:', error);
-                tg.showAlert('Произошла ошибка при отправке заказа. Пожалуйста, попробуйте еще раз.');
-            }
-        }
-
-        function playTestSound() {
-            console.log('Начало функции playTestSound');
-            initAudioContext();
-            console.log('AudioContext состояние:', audioContext.state);
-            
-            const oscillator = audioContext.createOscillator();
-            oscillator.type = 'sine';
-            oscillator.frequency.setValueAtTime(440, audioContext.currentTime); // 440 Hz
-            oscillator.connect(audioContext.destination);
-            oscillator.start();
-            oscillator.stop(audioContext.currentTime + 0.5); // Звучит 0.5 секунды
-            console.log('Тестовый звук запущен');
-        }
-
-        const testSoundBtn = document.getElementById('testSoundBtn');
-        if (testSoundBtn) {
-            console.log('Test sound button found');
-            testSoundBtn.addEventListener('click', function() {
-                console.log('Test sound button clicked');
-                playTestSound();
-            });
-        } else {
-            console.error('Test sound button not found');
-        }
-
-        // Добавляем обработчик для создания AudioContext после взаимодействия с пользователем
-        document.addEventListener('click', function initAudioContextOnUserGesture() {
-            initAudioContext();
-            document.removeEventListener('click', initAudioContextOnUserGesture);
-        }, { once: true });
-
-    } else {
-        console.error('Telegram WebApp API not found');
-    }
-});
-
-function updateVoiceActivityDisplay(level) {
-    const indicator = document.getElementById('voiceActivityIndicator');
-    if (indicator) {
-        indicator.style.width = `${level * 100}%`;
-    }
-}
