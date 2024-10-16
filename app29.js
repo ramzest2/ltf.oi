@@ -5,10 +5,7 @@ window.onerror = function(message, source, lineno, colno, error) {
 
 // Обработчик необработанных отклонений промисов
 window.addEventListener('unhandledrejection', function(event) {
-    if (event.reason && event.reason.type === 'BOT_RESPONSE_TIMEOUT') {
-        console.error('Превышено время ожидания ответа от бота');
-        tg.showAlert('Превышено время ожидания ответа. Пожалуйста, попробуйте еще раз.');
-    }
+    console.error('Необработанное отклонение промиса:', event.reason);
 });
 
 let audioContext;
@@ -41,14 +38,15 @@ function connectWebSocket() {
     socket.onmessage = (event) => {
         try {
             if (event.data instanceof ArrayBuffer) {
-                // Если получены аудиоданные (ArrayBuffer)
                 playAudio(event.data);
             } else {
-                // Если получены текстовые данные
                 const data = JSON.parse(event.data);
                 console.log('Получено сообщение:', data);
                 if (data.type === 'ai-response' && data.content) {
                     processAIResponse(data.content);
+                } else if (data.type === 'error') {
+                    console.error('Ошибка от сервера:', data.content);
+                    tg.showAlert(data.content);
                 }
             }
         } catch (error) {
@@ -86,6 +84,7 @@ function playAudio(arrayBuffer) {
     try {
         initAudioContext();
 
+        // 6. Расшифровка полученного ArrayBuffer
         audioContext.decodeAudioData(arrayBuffer, 
             (audioBuffer) => {
                 const source = audioContext.createBufferSource();
@@ -101,12 +100,20 @@ function playAudio(arrayBuffer) {
             },
             (error) => {
                 console.error('Ошибка при декодировании аудио:', error);
-                tg.showAlert('Произошла ошибка при декодировании аудио: ' + error.message);
+                if (tg && tg.showAlert) {
+                    tg.showAlert('Произошла ошибка при декодировании аудио: ' + error.message);
+                } else {
+                    alert('Произошла ошибка при декодировании аудио: ' + error.message);
+                }
             }
         );
     } catch (error) {
         console.error('Ошибка при обработке аудио:', error);
-        tg.showAlert('Произошла ошибка при обработке аудио: ' + error.message);
+        if (tg && tg.showAlert) {
+            tg.showAlert('Произошла ошибка при обработке аудио: ' + error.message);
+        } else {
+            alert('Произошла ошибка при обработке аудио: ' + error.message);
+        }
     }
 }
 
@@ -130,130 +137,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         socket = connectWebSocket();
-
-        let cart = {};
-
-        const fillingPrices = {
-            'chicken': 25000,
-            'beef': 40000,
-            'shrimp': 40000,
-            'falafel': 25000
-        };
-
-        let selectedFilling = 'chicken';
-
-        function updateMainButton() {
-            let total = Object.values(cart).reduce((sum, item) => sum + item.price * item.quantity, 0);
-            if (total > 0) {
-                tg.MainButton.setText(`Заказать (${formatPrice(total)})`);
-                tg.MainButton.show();
-            } else {
-                tg.MainButton.hide();
-            }
-        }
-
-        document.querySelectorAll('.filling-btn').forEach(btn => {
-            btn.addEventListener('click', function() {
-                document.querySelectorAll('.filling-btn').forEach(b => b.classList.remove('selected'));
-                this.classList.add('selected');
-                selectedFilling = this.dataset.filling;
-                updateShawarmaPrice();
-            });
-        });
-
-        function updateShawarmaPrice() {
-            const priceElement = document.getElementById('shawarma-price');
-            priceElement.textContent = formatPrice(fillingPrices[selectedFilling]);
-        }
-
-        document.getElementById('btn-shawarma').addEventListener('click', function() {
-            const filling = document.querySelector('.filling-btn.selected');
-            const fillingEmoji = filling ? filling.dataset.emoji : '🐓';
-            addToCart('shawarma', `Шаурма ${fillingEmoji}`, fillingPrices[selectedFilling]);
-        });
-
-        function addToCart(id, name, price, quantity = 1) {
-            if (cart[id]) {
-                cart[id].quantity += quantity;
-            } else {
-                cart[id] = { name, price: price * 1000, quantity };
-            }
-            updateCartDisplay();
-            updateMainButton();
-        }
-
-        document.querySelectorAll('.btn').forEach(btn => {
-            if (btn) {
-                btn.addEventListener('click', function() {
-                    let id = this.id.replace('btn-', '');
-                    let nameElement = this.parentElement.querySelector('h3');
-                    let priceElement = this.parentElement.querySelector('.price');
-                    
-                    if (nameElement && priceElement) {
-                        let name = nameElement.textContent;
-                        let price = parseInt(priceElement.textContent.replace(/[^0-9]/g, ''));
-                        addToCart(id, name, price);
-                    } else {
-                        console.warn(`Missing name or price element for button ${id}`);
-                    }
-                });
-            } else {
-                console.warn(`Button not found: ${btn}`);
-            }
-        });
-
-        function updateCartDisplay() {
-            let cartElement = document.getElementById('cart');
-            if (!cartElement) {
-                cartElement = document.createElement('div');
-                cartElement.id = 'cart';
-                document.body.appendChild(cartElement);
-            }
-            cartElement.innerHTML = '';
-            
-            for (let id in cart) {
-                let item = cart[id];
-                let itemElement = document.createElement('div');
-                itemElement.textContent = `${item.name} x${item.quantity} - ${formatPrice(item.price * item.quantity)}`;
-                
-                let removeButton = document.createElement('button');
-                removeButton.textContent = 'Удалить';
-                removeButton.onclick = () => removeFromCart(id);
-                
-                itemElement.appendChild(removeButton);
-                cartElement.appendChild(itemElement);
-            }
-        }
-
-        function removeFromCart(id) {
-            if (cart[id]) {
-                cart[id].quantity--;
-                if (cart[id].quantity <= 0) {
-                    delete cart[id];
-                }
-            }
-            updateCartDisplay();
-            updateMainButton();
-        }
-
-        tg.MainButton.onClick(function() {
-            placeOrder();
-        });
-
-        let usercard = document.getElementById("usercard");
-        let p = document.createElement("p");
-        p.innerText = `${tg.initDataUnsafe.user.first_name} ${tg.initDataUnsafe.user.last_name}`;
-        usercard.appendChild(p);
-
-        document.querySelector('.filling-btn[data-filling="chicken"]').classList.add('selected');
-        updateShawarmaPrice();
-        updateCartDisplay();
-        updateMainButton();
-        console.log('Page loaded, MainButton initialized');
-
-        function formatPrice(price) {
-            return `${(price / 1000).toFixed(0)}k рупий`;
-        }
 
         document.getElementById('voiceOrderBtn').addEventListener('click', function() {
             console.log('Нажата кнопка голосового ввода');
@@ -286,13 +169,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 recognition.onerror = function(event) {
                     console.error('Ошибка распознавания речи:', event.error);
                     let errorMessage = 'Произошла ошибка при распознавании речи.';
-                    switch(event.error) {
+                    switch (event.error) {
                         case 'network':
                             errorMessage += ' Проверьте подключение к интернету.';
                             break;
                         case 'not-allowed':
                         case 'service-not-allowed':
-                            errorMessage += ' Убедитесь, что вы разрешили доступ к микрофону.';
+                            errorMessage += ' Проверьте разрешения для микрофона.';
                             break;
                         case 'aborted':
                             errorMessage += ' Распознавание было прервано.';
@@ -411,31 +294,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.error('Error sending data to bot:', error);
                 tg.showAlert('Произошла ошибка при отправке заказа. Пожалуйста, попробуйте еще раз.');
             }
-        }
-
-        function playTestSound() {
-            console.log('Начало функции playTestSound');
-            initAudioContext();
-            console.log('AudioContext состояние:', audioContext.state);
-            
-            const oscillator = audioContext.createOscillator();
-            oscillator.type = 'sine';
-            oscillator.frequency.setValueAtTime(440, audioContext.currentTime); // 440 Hz
-            oscillator.connect(audioContext.destination);
-            oscillator.start();
-            oscillator.stop(audioContext.currentTime + 0.5); // Звучит 0.5 секунды
-            console.log('Тестовый звук запущен');
-        }
-
-        const testSoundBtn = document.getElementById('testSoundBtn');
-        if (testSoundBtn) {
-            console.log('Test sound button found');
-            testSoundBtn.addEventListener('click', function() {
-                console.log('Test sound button clicked');
-                playTestSound();
-            });
-        } else {
-            console.error('Test sound button not found');
         }
 
         // Добавляем обработчик для создания AudioContext после взаимодействия с пользователем
