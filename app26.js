@@ -3,7 +3,7 @@ window.onerror = function(message, source, lineno, colno, error) {
     console.error('Глобальная ошибка:', message, 'Источник:', source, 'Строка:', lineno, 'Колонка:', colno, 'Объект ошибки:', error);
 };
 
-// Обработчик необработанных отклонений промисов
+// Обработчик необработанных отклонений промисоа
 window.addEventListener('unhandledrejection', function(event) {
     if (event.reason && event.reason.type === 'BOT_RESPONSE_TIMEOUT') {
         console.error('Превышено время ожидания ответа от бота');
