@@ -31,7 +31,7 @@ function initAudioContext() {
 }
 
 function connectWebSocket() {
-    const serverIP = '192.168.1.7'; // Замените на реальный локальный IP-адрес вашего сервера
+    const serverIP = '192.168.1.8'; // Замените на реальный локальный IP-адрес вашего сервера
     const serverPort = 3000; // Убедитесь, что это соответствует порту вашего сервера
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     
