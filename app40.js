@@ -73,6 +73,7 @@ function connectWebSocket() {
 
     socket.onerror = (error) => {
         console.error('Ошибка WebSocket:', error);
+        console.log('Детали ошибки:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
         tg.showAlert(`Произошла ошибка соединения: ${error.message}. Проверьте подключение к интернету и попробуйте обновить страницу.`);
     };
 
