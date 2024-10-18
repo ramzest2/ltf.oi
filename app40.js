@@ -34,7 +34,9 @@ function connectWebSocket() {
     const serverIP = '192.168.1.8'; // Замените на реальный локальный IP-адрес вашего сервера
     const serverPort = 3000; // Убедитесь, что это соответствует порту вашего сервера
     // const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const protocol = window.location.protocol === 'https:' ? 'ws:' : 'ws:';
+    // const protocol = window.location.protocol === 'https:' ? 'ws:' : 'ws:';
+    const protocol = 'wss:';
+   socket = new WebSocket(`${protocol}//${serverIP}:${serverPort}`);
     
     socket = new WebSocket(`${protocol}//${serverIP}:${serverPort}`);
     
