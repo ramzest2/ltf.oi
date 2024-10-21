@@ -352,4 +352,229 @@ document.addEventListener('DOMContentLoaded', function() {
                 };
 
                 recognition.onend = function() {
-                    console.
+                    console.log('Распознавание завершено');
+                    document.getElementById('voiceOrderBtn').disabled = false;
+                    document.getElementById('voiceOrderBtn').textContent = 'Голосовой ввод';
+                };
+
+                recognition.onaudiostart = function() {
+                    console.log('Начало записи аудио');
+                    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    const analyser = audioContext.createAnalyser();
+                    analyser.fftSize = 256;
+                    const bufferLength = analyser.frequencyBinCount;
+                    const dataArray = new Uint8Array(bufferLength);
+
+                    navigator.mediaDevices.getUserMedia({ audio: true })
+                        .then(stream => {
+                            const source = audioContext.createMediaStreamSource(stream);
+                            source.connect(analyser);
+
+                            function updateLevel() {
+                                analyser.getByteFrequencyData(dataArray);
+                                let sum = dataArray.reduce((a, b) => a + b);
+                                let average = sum / bufferLength;
+                                let level = average / 255;
+                                updateVoiceActivityDisplay(level);
+                                requestAnimationFrame(updateLevel);
+                            }
+                            updateLevel();
+                        })
+                        .catch(err => console.error('Ошибка при получении доступа к микрофону:', err));
+                };
+            } else {
+                console.error('Web Speech API не поддерживается в этом браузере.');
+                voiceInput.value = 'Голосовой ввод не поддерживается';
+                tg.showAlert('Голосовой ввод не поддерживается в вашем браузере. Попробуйте использовать другой браузер или устройство.');
+                this.disabled = false;
+                this.textContent = 'Голосовой ввод';
+            }
+        });
+
+        function processAIResponse(response) {
+            console.log('Processing AI response:', response);
+            if (typeof response === 'string') {
+                if (response.toLowerCase().includes('добавить в корзину')) {
+                    const match = response.match(/добавить в корзину (\d+) (.+)/i);
+                    if (match) {
+                        const quantity = parseInt(match[1]);
+                        const item = match[2];
+                        addToCartFromVoice(item, quantity);
+                    }
+                } else if (response.toLowerCase().includes('оформить заказ')) {
+                    placeOrder();
+                }
+            }
+        }
+
+        function addToCartFromVoice(item, quantity) {
+            const menuItem = findMenuItem(item);
+            if (menuItem) {
+                addToCart(menuItem.id, menuItem.name, menuItem.price, quantity);
+                tg.showAlert(`Добавлено в корзину: ${menuItem.name} x${quantity}`);
+            } else {
+                tg.showAlert(`Товар "${item}" не найден в меню`);
+            }
+        }
+
+        function findMenuItem(itemName) {
+            const menu = [
+                {id: 'shawarma_chicken', name: 'Шаурма с курицей', price: 25000},
+                {id: 'shawarma_beef', name: 'Шаурма с говядиной', price: 40000},
+                {id: 'shawarma_shrimp', name: 'Шаурма с креветками', price: 40000},
+                {id: 'falafel', name: 'Фалафель', price: 25000},
+                {id: 'pita', name: 'Пита', price: 25000},
+                {id: 'hummus', name: 'Хумус', price: 25000},
+                {id: 'chicken_kebab', name: 'Шашлык из курицы', price: 35000},
+                {id: 'gozleme', name: 'Гёзлеме', price: 25000},
+                {id: 'lentil_soup', name: 'Чечевичный суп', price: 20000},
+            ];
+            return menu.find(item => item.name.toLowerCase().includes(itemName.toLowerCase()));
+        }
+
+        function placeOrder() {
+            let order = Object.values(cart).map(item => ({
+                name: item.name,
+                quantity: item.quantity,
+                price: item.price
+            }));
+            let total = Object.values(cart).reduce((sum, item) => sum + item.price * item.quantity, 0);
+            
+            console.log('Отправка заказа:', JSON.stringify({ order, total }, null, 2));
+            
+            try {
+                tg.sendData(JSON.stringify({ order, total }));
+                tg.showAlert('Заказ оформляется. Пожалуйста, подождите...');
+                
+                let timeoutId = setTimeout(() => {
+                    tg.showAlert('Обработка заказа занимает больше времени, чем обычно. Пожалуйста, подождите.');
+                }, 10000); // 10 секунд
+                
+                tg.onEvent('qr_code_received', function(qrCodeData) {
+                    clearTimeout(timeoutId);
+                    displayQRCode(qrCodeData);
+                    cart = {};
+                    updateCartDisplay();
+                    updateMainButton();
+                });
+            } catch (error) {
+                console.error('Error sending data to bot:', error);
+                if (error.message.includes('FLOOD_WAIT')) {
+                    tg.showAlert('Слишком много запросов. Пожалуйста, подождите немного и попробуйте снова.');
+                } else if (error.message.includes('USER_DEACTIVATED')) {
+                    tg.showAlert('Ваш аккаунт деактивирован. Пожалуйста, свяжитесь с поддержкой Telegram.');
+                } else {
+                    tg.showAlert('Произошла ошибка при отправке заказа. Пожалуйста, попробуйте еще раз.');
+                }
+                
+                if (retryCount < maxRetries) {
+                    retryCount++;
+                    setTimeout(() => {
+                        tg.showAlert(`Повторная попытка отправки заказа (${retryCount}/${maxRetries})...`);
+                        placeOrder();
+                    }, 2000 * retryCount); // Увеличиваем интервал с каждой попыткой
+                } else {
+                    tg.showAlert('Не удалось отправить заказ после нескольких попыток. Пожалуйста, попробуйте позже.');
+                    retryCount = 0;
+                }
+                return;
+            }
+            
+            // Сброс счетчика попыток при успешной отправке
+            retryCount = 0;
+        }
+
+        function displayQRCode(qrCodeUrl) {
+            // Создаем новый элемент изображения для QR-кода
+            let qrCodeImg = document.createElement('img');
+            qrCodeImg.src = qrCodeUrl;
+            qrCodeImg.alt = 'QR-код для оплаты';
+            qrCodeImg.style.maxWidth = '100%';
+            
+            // Создаем контейнер для QR-кода
+            let qrCodeContainer = document.createElement('div');
+            qrCodeContainer.id = 'qrCodeContainer';
+            qrCodeContainer.style.position = 'fixed';
+            qrCodeContainer.style.top = '50%';
+            qrCodeContainer.style.left = '50%';
+            qrCodeContainer.style.transform = 'translate(-50%, -50%)';
+            qrCodeContainer.style.backgroundColor = 'white';
+            qrCodeContainer.style.padding = '20px';
+            qrCodeContainer.style.borderRadius = '10px';
+            qrCodeContainer.style.boxShadow = '0 0 10px rgba(0,0,0,0.5)';
+            
+            // Добавляем изображение QR-кода в контейнер
+            qrCodeContainer.appendChild(qrCodeImg);
+            
+            // Добавляем кнопку закрытия
+            let closeButton = document.createElement('button');
+            closeButton.textContent = 'Закрыть';
+            closeButton.style.marginTop = '10px';
+            closeButton.onclick = function() {
+                document.body.removeChild(qrCodeContainer);
+            };
+            qrCodeContainer.appendChild(closeButton);
+            
+            // Добавляем контейнер с QR-кодом на страницу
+            document.body.appendChild(qrCodeContainer);
+        }
+
+        function playTestSound() {
+            console.log('Начало функции playTestSound');
+            initAudioContext();
+            console.log('AudioContext состояние:', audioContext.state);
+            
+            const oscillator = audioContext.createOscillator();
+            oscillator.type = 'sine';
+            oscillator.frequency.setValueAtTime(440, audioContext.currentTime);
+            oscillator.connect(audioContext.destination);
+            oscillator.start();
+            oscillator.stop(audioContext.currentTime + 0.5);
+            console.log('Тестовый звук запущен');
+        }
+
+        const testSoundBtn = document.getElementById('testSoundBtn');
+        if (testSoundBtn) {
+            console.log('Test sound button found');
+            testSoundBtn.addEventListener('click', function() {
+                console.log('Test sound button clicked');
+                playTestSound();
+            });
+        } else {
+            console.error('Test sound button not found');
+        }
+
+        document.addEventListener('click', function initAudioContextOnUserGesture() {
+            initAudioContext();
+            document.removeEventListener('click', initAudioContextOnUserGesture);
+        }, { once: true });
+
+    } else {
+        console.error('Telegram WebApp API not found');
+    }
+});
+
+function updateVoiceActivityDisplay(level) {
+    const indicator = document.getElementById('voiceActivityIndicator');
+    if (indicator) {
+        indicator.style.width = `${level * 100}%`;
+    }
+}
+
+function logCartState() {
+    console.log('Текущее состояние корзины:');
+    for (let id in cart) {
+        console.log(`${id}: ${JSON.stringify(cart[id])}`);
+    }
+}
+
+// Обработка ошибок сети
+window.addEventListener('online', function() {
+    console.log('Соединение восстановлено');
+    tg.showAlert('Соединение восстановлено. Вы можете продолжить оформление заказа.');
+});
+
+window.addEventListener('offline', function() {
+    console.log('Соединение потеряно');
+    tg.showAlert('Соединение потеряно. Пожалуйста, проверьте подключение к интернету.');
+});
