@@ -168,7 +168,7 @@ body {
     opacity: 0.8;
 }
 
-#cartDisplay {
+/* #cartDisplay {
     display: none;
     position: fixed;
     top: 50%;
@@ -193,4 +193,4 @@ body {
     border: none;
     border-radius: 5px;
     cursor: pointer;
-}
+} */
