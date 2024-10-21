@@ -179,6 +179,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
         function addToCart(id, name, price, quantity = 1) {
             console.log(`Добавление в корзину: id=${id}, name=${name}, price=${price}, quantity=${quantity}`);
+            console.log(`Вызов addToCart с параметрами:`, {id, name, price, quantity});
+            console.trace('Трассировка вызова addToCart');
             
             if (id.startsWith('shawarma_')) {
                 const filling = id.split('_')[1];
