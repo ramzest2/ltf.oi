@@ -233,8 +233,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             });
         }
-
         function updateCartDisplay() {
+            console.log('Начало обновления отображения корзины');
             let cartElement = document.getElementById('cartDisplay');
             if (!cartElement) {
                 cartElement = document.createElement('div');
@@ -246,28 +246,60 @@ document.addEventListener('DOMContentLoaded', function() {
             let total = 0;
             for (let id in cart) {
                 let item = cart[id];
-                if (item) {
-                    console.log(`Отображение товара: id=${id}, name=${item.name}, price=${item.price}, quantity=${item.quantity}`);
-                    let itemElement = document.createElement('div');
-                    const itemTotal = item.price * item.quantity;
-                    itemElement.textContent = `${item.name} x${item.quantity} - ${formatPrice(itemTotal)}`;
-                    
-                    let removeButton = document.createElement('button');
-                    removeButton.textContent = 'Удалить';
-                    removeButton.onclick = () => removeFromCart(id);
-                    
-                    itemElement.appendChild(removeButton);
-                    cartElement.appendChild(itemElement);
-                    total += itemTotal;
-                }
+                console.log(`Отображение товара: id=${id}, name=${item.name}, price=${item.price}, quantity=${item.quantity}`);
+                let itemElement = document.createElement('div');
+                const itemTotal = item.price * item.quantity;
+                itemElement.textContent = `${item.name} x${item.quantity} - ${formatPrice(itemTotal)}`;
+                
+                let removeButton = document.createElement('button');
+                removeButton.textContent = 'Удалить';
+                removeButton.onclick = () => removeFromCart(id);
+                
+                itemElement.appendChild(removeButton);
+                cartElement.appendChild(itemElement);
+                total += itemTotal;
             }
-
+        
             let totalElement = document.createElement('div');
             totalElement.textContent = `Итого: ${formatPrice(total)}`;
             cartElement.appendChild(totalElement);
             
             console.log('Обновленное отображение корзины:', cartElement.innerHTML);
         }
+        // function updateCartDisplay() {
+        //     let cartElement = document.getElementById('cartDisplay');
+        //     if (!cartElement) {
+        //         cartElement = document.createElement('div');
+        //         cartElement.id = 'cartDisplay';
+        //         document.body.appendChild(cartElement);
+        //     }
+        //     cartElement.innerHTML = '';
+            
+        //     let total = 0;
+        //     for (let id in cart) {
+        //         let item = cart[id];
+        //         if (item) {
+        //             console.log(`Отображение товара: id=${id}, name=${item.name}, price=${item.price}, quantity=${item.quantity}`);
+        //             let itemElement = document.createElement('div');
+        //             const itemTotal = item.price * item.quantity;
+        //             itemElement.textContent = `${item.name} x${item.quantity} - ${formatPrice(itemTotal)}`;
+                    
+        //             let removeButton = document.createElement('button');
+        //             removeButton.textContent = 'Удалить';
+        //             removeButton.onclick = () => removeFromCart(id);
+                    
+        //             itemElement.appendChild(removeButton);
+        //             cartElement.appendChild(itemElement);
+        //             total += itemTotal;
+        //         }
+        //     }
+
+        //     let totalElement = document.createElement('div');
+        //     totalElement.textContent = `Итого: ${formatPrice(total)}`;
+        //     cartElement.appendChild(totalElement);
+            
+        //     console.log('Обновленное отображение корзины:', cartElement.innerHTML);
+        // }
 
         function removeFromCart(id) {
             if (cart[id]) {
