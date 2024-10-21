@@ -14,6 +14,7 @@ window.addEventListener('unhandledrejection', function(event) {
 let audioContext;
 let tg;
 let socket;
+let cart = {};
 
 function initAudioContext() {
     if (!audioContext) {
@@ -127,8 +128,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
         socket = connectWebSocket();
 
-        let cart = {};
-
         const fillingPrices = {
             'chicken': 25000,
             'beef': 40000,
@@ -164,28 +163,45 @@ document.addEventListener('DOMContentLoaded', function() {
 
         document.getElementById('btn-shawarma').addEventListener('click', function() {
             const filling = document.querySelector('.filling-btn.selected');
-            const fillingEmoji = filling ? filling.dataset.emoji : '🐓';
-            const fillingName = filling ? filling.textContent.trim() : 'Курица';
-            addToCart('shawarma', `Шаурма (${fillingName})`, fillingPrices[selectedFilling]);
+            if (filling) {
+                const fillingName = filling.textContent.trim();
+                const fillingId = filling.dataset.filling;
+                const price = fillingPrices[fillingId];
+                console.log(`Выбрана шаурма: ${fillingName}, цена: ${price}`);
+                addToCart('shawarma', `Шаурма (${fillingName})`, price);
+            } else {
+                console.error('Начинка для шаурмы не выбрана');
+                tg.showAlert('Пожалуйста, выберите начинку для шаурмы');
+            }
         });
 
         function addToCart(id, name, price, quantity = 1) {
-            // Для шаурмы добавляем начинку к id
+            console.log(`Добавление в корзину: ${id}, ${name}, ${price}, ${quantity}`);
+            
+            // Для шаурмы создаем уникальный id на основе начинки
             if (id === 'shawarma') {
                 const filling = document.querySelector('.filling-btn.selected');
                 if (filling) {
                     id = `shawarma_${filling.dataset.filling}`;
-                    name = `${name} (${filling.textContent.trim()})`;
+                    name = `Шаурма (${filling.textContent.trim()})`;
                 }
             }
+            
+            console.log(`Обработанный id: ${id}`);
 
             if (cart[id]) {
+                console.log(`Товар ${id} уже в корзине, увеличиваем количество`);
                 cart[id].quantity += quantity;
             } else {
-                cart[id] = { name, price: price * 1000, quantity };
+                console.log(`Добавляем новый товар ${id} в корзину`);
+                cart[id] = { name, price, quantity };
             }
+            
+            console.log('Текущее состояние корзины:', cart);
+            
             updateCartDisplay();
             updateMainButton();
+            logCartState();
         }
 
         document.querySelectorAll('.btn').forEach(btn => {
@@ -249,6 +265,8 @@ document.addEventListener('DOMContentLoaded', function() {
             let totalElement = document.createElement('div');
             totalElement.textContent = `Итого: ${formatPrice(total)}`;
             cartElement.appendChild(totalElement);
+            
+            console.log('Обновленное отображение корзины:', cartElement.innerHTML);
         }
 
         function removeFromCart(id) {
@@ -260,6 +278,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             updateCartDisplay();
             updateMainButton();
+            logCartState();
         }
 
         tg.MainButton.onClick(function() {
@@ -476,5 +495,12 @@ function updateVoiceActivityDisplay(level) {
     const indicator = document.getElementById('voiceActivityIndicator');
     if (indicator) {
         indicator.style.width = `${level * 100}%`;
+    }
+}
+
+function logCartState() {
+    console.log('Текущее состояние корзины:');
+    for (let id in cart) {
+        console.log(`${id}: ${JSON.stringify(cart[id])}`);
     }
 }
