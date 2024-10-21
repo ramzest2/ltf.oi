@@ -167,3 +167,30 @@ body {
 .test-sound-btn:hover {
     opacity: 0.8;
 }
+
+#cartDisplay {
+    display: none;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: var(--tg-theme-bg-color);
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    z-index: 1000;
+    max-width: 80%;
+    max-height: 80%;
+    overflow-y: auto;
+}
+
+#showCartBtn, #sendOrderBtn {
+    display: inline-block;
+    padding: 10px 20px;
+    margin: 10px;
+    background-color: var(--tg-theme-button-color);
+    color: var(--tg-theme-button-text-color);
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
