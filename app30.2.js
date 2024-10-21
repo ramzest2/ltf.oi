@@ -167,8 +167,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 const fillingName = filling.textContent.trim();
                 const fillingId = filling.dataset.filling;
                 const price = fillingPrices[fillingId];
-                console.log(`Выбрана шаурма: ${fillingName}, цена: ${price}`);
-                addToCart('shawarma', `Шаурма (${fillingName})`, price);
+                const id = `shawarma_${fillingId}`;
+                const name = `Шаурма (${filling.dataset.emoji})`;
+                console.log(`Добавление шаурмы: id=${id}, name=${name}, price=${price}`);
+                addToCart(id, name, price, 1);  // Всегда добавляем 1 шаурму
             } else {
                 console.error('Начинка для шаурмы не выбрана');
                 tg.showAlert('Пожалуйста, выберите начинку для шаурмы');
@@ -176,28 +178,17 @@ document.addEventListener('DOMContentLoaded', function() {
         });
 
         function addToCart(id, name, price, quantity = 1) {
-            console.log(`Добавление в корзину: ${id}, ${name}, ${price}, ${quantity}`);
+            console.log(`Добавление в корзину: id=${id}, name=${name}, price=${price}, quantity=${quantity}`);
             
-            // Для шаурмы создаем уникальный id на основе начинки
-            if (id === 'shawarma') {
-                const filling = document.querySelector('.filling-btn.selected');
-                if (filling) {
-                    id = `shawarma_${filling.dataset.filling}`;
-                    name = `Шаурма (${filling.textContent.trim()})`;
-                }
-            }
-            
-            console.log(`Обработанный id: ${id}`);
-
             if (cart[id]) {
-                console.log(`Товар ${id} уже в корзине, увеличиваем количество`);
+                console.log(`Товар ${id} уже в корзине, увеличиваем количество на ${quantity}`);
                 cart[id].quantity += quantity;
             } else {
                 console.log(`Добавляем новый товар ${id} в корзину`);
                 cart[id] = { name, price, quantity };
             }
             
-            console.log('Текущее состояние корзины:', cart);
+            console.log('Текущее состояние корзины:', JSON.stringify(cart, null, 2));
             
             updateCartDisplay();
             updateMainButton();
@@ -443,6 +434,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 price: item.price
             }));
             let total = Object.values(cart).reduce((sum, item) => sum + item.price * item.quantity, 0);
+            
+            console.log('Отправка заказа:', JSON.stringify({ order, total }, null, 2));
             
             try {
                 tg.sendData(JSON.stringify({ order, total }));
