@@ -431,8 +431,8 @@ document.addEventListener('DOMContentLoaded', function() {
             ];
             return menu.find(item => item.name.toLowerCase().includes(itemName.toLowerCase()));
         }
-
         function placeOrder() {
+            console.log('Начало функции placeOrder');
             let order = Object.values(cart).map(item => ({
                 name: item.name,
                 quantity: item.quantity,
@@ -440,49 +440,126 @@ document.addEventListener('DOMContentLoaded', function() {
             }));
             let total = Object.values(cart).reduce((sum, item) => sum + item.price * item.quantity, 0);
             
-            console.log('Отправка заказа:', JSON.stringify({ order, total }, null, 2));
+            console.log('Подготовленный заказ:', JSON.stringify(order, null, 2));
+            console.log('Общая сумма заказа:', total);
+            
+            let dataToSend = JSON.stringify({ order, total });
+            console.log('Данные для отправки в Telegram:', dataToSend);
             
             try {
-                tg.sendData(JSON.stringify({ order, total }));
+                console.log('Попытка отправки данных в Telegram...');
+                tg.sendData(dataToSend);
+                console.log('Данные успешно отправлены в Telegram');
+                
+                console.log('Отображение уведомления пользователю');
                 tg.showAlert('Заказ оформляется. Пожалуйста, подождите...');
                 
+                console.log('Установка таймера для длительной обработки');
                 let timeoutId = setTimeout(() => {
+                    console.log('Сработал таймер длительной обработки');
                     tg.showAlert('Обработка заказа занимает больше времени, чем обычно. Пожалуйста, подождите.');
                 }, 10000); // 10 секунд
                 
+                console.log('Установка обработчика события получения QR-кода');
                 tg.onEvent('qr_code_received', function(qrCodeData) {
+                    console.log('Получен QR-код:', qrCodeData);
                     clearTimeout(timeoutId);
+                    console.log('Таймер длительной обработки отменен');
                     displayQRCode(qrCodeData);
+                    console.log('QR-код отображен пользователю');
                     cart = {};
+                    console.log('Корзина очищена');
                     updateCartDisplay();
+                    console.log('Отображение корзины обновлено');
                     updateMainButton();
+                    console.log('Главная кнопка обновлена');
                 });
             } catch (error) {
-                console.error('Error sending data to bot:', error);
+                console.error('Ошибка при отправке данных в Telegram:', error);
                 if (error.message.includes('FLOOD_WAIT')) {
+                    console.log('Обнаружена ошибка FLOOD_WAIT');
                     tg.showAlert('Слишком много запросов. Пожалуйста, подождите немного и попробуйте снова.');
                 } else if (error.message.includes('USER_DEACTIVATED')) {
+                    console.log('Обнаружена ошибка USER_DEACTIVATED');
                     tg.showAlert('Ваш аккаунт деактивирован. Пожалуйста, свяжитесь с поддержкой Telegram.');
                 } else {
+                    console.log('Обнаружена неизвестная ошибка');
                     tg.showAlert('Произошла ошибка при отправке заказа. Пожалуйста, попробуйте еще раз.');
                 }
                 
                 if (retryCount < maxRetries) {
                     retryCount++;
+                    console.log(`Попытка повторной отправки ${retryCount}/${maxRetries}`);
                     setTimeout(() => {
+                        console.log(`Начало повторной попытки отправки ${retryCount}`);
                         tg.showAlert(`Повторная попытка отправки заказа (${retryCount}/${maxRetries})...`);
                         placeOrder();
                     }, 2000 * retryCount); // Увеличиваем интервал с каждой попыткой
                 } else {
+                    console.log('Достигнуто максимальное количество попыток');
                     tg.showAlert('Не удалось отправить заказ после нескольких попыток. Пожалуйста, попробуйте позже.');
                     retryCount = 0;
+                    console.log('Счетчик попыток сброшен');
                 }
                 return;
             }
             
             // Сброс счетчика попыток при успешной отправке
             retryCount = 0;
+            console.log('Счетчик попыток сброшен после успешной отправки');
+            console.log('Завершение функции placeOrder');
         }
+        // function placeOrder() {
+        //     let order = Object.values(cart).map(item => ({
+        //         name: item.name,
+        //         quantity: item.quantity,
+        //         price: item.price
+        //     }));
+        //     let total = Object.values(cart).reduce((sum, item) => sum + item.price * item.quantity, 0);
+            
+        //     console.log('Отправка заказа:', JSON.stringify({ order, total }, null, 2));
+            
+        //     try {
+        //         tg.sendData(JSON.stringify({ order, total }));
+        //         tg.showAlert('Заказ оформляется. Пожалуйста, подождите...');
+                
+        //         let timeoutId = setTimeout(() => {
+        //             tg.showAlert('Обработка заказа занимает больше времени, чем обычно. Пожалуйста, подождите.');
+        //         }, 10000); // 10 секунд
+                
+        //         tg.onEvent('qr_code_received', function(qrCodeData) {
+        //             clearTimeout(timeoutId);
+        //             displayQRCode(qrCodeData);
+        //             cart = {};
+        //             updateCartDisplay();
+        //             updateMainButton();
+        //         });
+        //     } catch (error) {
+        //         console.error('Error sending data to bot:', error);
+        //         if (error.message.includes('FLOOD_WAIT')) {
+        //             tg.showAlert('Слишком много запросов. Пожалуйста, подождите немного и попробуйте снова.');
+        //         } else if (error.message.includes('USER_DEACTIVATED')) {
+        //             tg.showAlert('Ваш аккаунт деактивирован. Пожалуйста, свяжитесь с поддержкой Telegram.');
+        //         } else {
+        //             tg.showAlert('Произошла ошибка при отправке заказа. Пожалуйста, попробуйте еще раз.');
+        //         }
+                
+        //         if (retryCount < maxRetries) {
+        //             retryCount++;
+        //             setTimeout(() => {
+        //                 tg.showAlert(`Повторная попытка отправки заказа (${retryCount}/${maxRetries})...`);
+        //                 placeOrder();
+        //             }, 2000 * retryCount); // Увеличиваем интервал с каждой попыткой
+        //         } else {
+        //             tg.showAlert('Не удалось отправить заказ после нескольких попыток. Пожалуйста, попробуйте позже.');
+        //             retryCount = 0;
+        //         }
+        //         return;
+        //     }
+            
+        //     // Сброс счетчика попыток при успешной отправке
+        //     retryCount = 0;
+        // }
 
         function displayQRCode(qrCodeUrl) {
             // Создаем новый элемент изображения для QR-кода
