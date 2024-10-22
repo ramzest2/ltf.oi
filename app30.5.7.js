@@ -456,9 +456,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             }
         }
-
+        
         function placeOrder() {
             console.log('Начало функции placeOrder');
+            console.log('Версия WebApp:', tg.version);
+            console.log('Платформа:', tg.platform);
+            console.log('Тема:', tg.colorScheme);
+            console.log('Язык пользователя:', tg.initDataUnsafe?.user?.language_code);
+        
             let order = Object.values(cart).map(item => ({
                 name: item.name,
                 quantity: item.quantity,
@@ -482,9 +487,25 @@ document.addEventListener('DOMContentLoaded', function() {
             
             try {
                 console.log('Попытка отправки данных в Telegram...');
+                console.log('Текущее состояние WebApp перед отправкой:', 
+                    'isExpanded:', tg.isExpanded, 
+                    'viewportHeight:', tg.viewportHeight, 
+                    'viewportStableHeight:', tg.viewportStableHeight
+                );
+        
                 tg.sendData(dataToSend);
+                
                 console.log('Данные успешно отправлены в Telegram');
                 
+                // Проверка, была ли закрыта WebApp после отправки данных
+                setTimeout(() => {
+                    if (tg.isClosingConfirmationEnabled) {
+                        console.log('WebApp все еще открыта после вызова sendData()');
+                    } else {
+                        console.log('WebApp была закрыта после вызова sendData()');
+                    }
+                }, 100);
+        
                 console.log('Отображение уведомления пользователю');
                 tg.showPopup({
                     title: 'Оформление заказа',
@@ -518,6 +539,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
             } catch (error) {
                 console.error('Ошибка при отправке данных в Telegram:', error);
+                console.error('Стек вызовов:', error.stack);
+                
                 if (error.message.includes('FLOOD_WAIT')) {
                     console.log('Обнаружена ошибка FLOOD_WAIT');
                     tg.showAlert('Слишком много запросов. Пожалуйста, подождите немного и попробуйте снова.');
@@ -551,6 +574,100 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log('Счетчик попыток сброшен после успешной отправки');
             console.log('Завершение функции placeOrder');
         }
+        // function placeOrder() {
+        //     console.log('Начало функции placeOrder');
+        //     let order = Object.values(cart).map(item => ({
+        //         name: item.name,
+        //         quantity: item.quantity,
+        //         price: item.price
+        //     }));
+        //     let total = Object.values(cart).reduce((sum, item) => sum + item.price * item.quantity, 0);
+            
+        //     console.log('Подготовленный заказ:', JSON.stringify(order, null, 2));
+        //     console.log('Общая сумма заказа:', total);
+            
+        //     try {
+        //         validateOrder(order);
+        //     } catch (error) {
+        //         console.error('Ошибка валидации заказа:', error);
+        //         tg.showAlert('Ошибка в данных заказа. Пожалуйста, проверьте корзину и попробуйте снова.');
+        //         return;
+        //     }
+            
+        //     let dataToSend = JSON.stringify({ order, total });
+        //     console.log('Данные для отправки в Telegram:', dataToSend);
+            
+        //     try {
+        //         console.log('Попытка отправки данных в Telegram...');
+        //         tg.sendData(dataToSend);
+        //         console.log('Данные успешно отправлены в Telegram');
+                
+        //         console.log('Отображение уведомления пользователю');
+        //         tg.showPopup({
+        //             title: 'Оформление заказа',
+        //             message: 'Заказ оформляется. Пожалуйста, подождите...',
+        //             buttons: [{ type: 'close' }]
+        //         });
+                
+        //         console.log('Установка таймера для длительной обработки');
+        //         let timeoutId = setTimeout(() => {
+        //             console.log('Сработал таймер длительной обработки');
+        //             tg.showPopup({
+        //                 title: 'Обработка заказа',
+        //                 message: 'Обработка заказа занимает больше времени, чем обычно. Пожалуйста, подождите.',
+        //                 buttons: [{ type: 'close' }]
+        //             });
+        //         }, 10000); // 10 секунд
+                
+        //         console.log('Установка обработчика события получения QR-кода');
+        //         tg.onEvent('qr_code_received', function(qrCodeData) {
+        //             console.log('Получен QR-код:', qrCodeData);
+        //             clearTimeout(timeoutId);
+        //             console.log('Таймер длительной обработки отменен');
+        //             displayQRCode(qrCodeData);
+        //             console.log('QR-код отображен пользователю');
+        //             cart = {};
+        //             console.log('Корзина очищена');
+        //             updateCartDisplay();
+        //             console.log('Отображение корзины обновлено');
+        //             updateMainButton();
+        //             console.log('Главная кнопка обновлена');
+        //         });
+        //     } catch (error) {
+        //         console.error('Ошибка при отправке данных в Telegram:', error);
+        //         if (error.message.includes('FLOOD_WAIT')) {
+        //             console.log('Обнаружена ошибка FLOOD_WAIT');
+        //             tg.showAlert('Слишком много запросов. Пожалуйста, подождите немного и попробуйте снова.');
+        //         } else if (error.message.includes('USER_DEACTIVATED')) {
+        //             console.log('Обнаружена ошибка USER_DEACTIVATED');
+        //             tg.showAlert('Ваш аккаунт деактивирован. Пожалуйста, свяжитесь с поддержкой Telegram.');
+        //         } else {
+        //             console.log('Обнаружена неизвестная ошибка');
+        //             tg.showAlert('Произошла ошибка при отправке заказа. Пожалуйста, попробуйте еще раз.');
+        //         }
+                
+        //         if (retryCount < maxRetries) {
+        //             retryCount++;
+        //             console.log(`Попытка повторной отправки ${retryCount}/${maxRetries}`);
+        //             setTimeout(() => {
+        //                 console.log(`Начало повторной попытки отправки ${retryCount}`);
+        //                 tg.showAlert(`Повторная попытка отправки заказа (${retryCount}/${maxRetries})...`);
+        //                 placeOrder();
+        //             }, 2000 * retryCount); // Увеличиваем интервал с каждой попыткой
+        //         } else {
+        //             console.log('Достигнуто максимальное количество попыток');
+        //             tg.showAlert('Не удалось отправить заказ после нескольких попыток. Пожалуйста, попробуйте позже.');
+        //             retryCount = 0;
+        //             console.log('Счетчик попыток сброшен');
+        //         }
+        //         return;
+        //     }
+            
+        //     // Сброс счетчика попыток при успешной отправке
+        //     retryCount = 0;
+        //     console.log('Счетчик попыток сброшен после успешной отправки');
+        //     console.log('Завершение функции placeOrder');
+        // }
 
         function displayQRCode(qrCodeUrl) {
             // Создаем новый элемент изображения для QR-кода
