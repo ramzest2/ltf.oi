@@ -459,11 +459,6 @@ document.addEventListener('DOMContentLoaded', function() {
         
         function placeOrder() {
             console.log('Начало функции placeOrder');
-            console.log('Версия WebApp:', tg.version);
-            console.log('Платформа:', tg.platform);
-            console.log('Тема:', tg.colorScheme);
-            console.log('Язык пользователя:', tg.initDataUnsafe?.user?.language_code);
-        
             let order = Object.values(cart).map(item => ({
                 name: item.name,
                 quantity: item.quantity,
@@ -487,25 +482,9 @@ document.addEventListener('DOMContentLoaded', function() {
             
             try {
                 console.log('Попытка отправки данных в Telegram...');
-                console.log('Текущее состояние WebApp перед отправкой:', 
-                    'isExpanded:', tg.isExpanded, 
-                    'viewportHeight:', tg.viewportHeight, 
-                    'viewportStableHeight:', tg.viewportStableHeight
-                );
-        
                 tg.sendData(dataToSend);
-                
                 console.log('Данные успешно отправлены в Telegram');
                 
-                // Проверка, была ли закрыта WebApp после отправки данных
-                setTimeout(() => {
-                    if (tg.isClosingConfirmationEnabled) {
-                        console.log('WebApp все еще открыта после вызова sendData()');
-                    } else {
-                        console.log('WebApp была закрыта после вызова sendData()');
-                    }
-                }, 100);
-        
                 console.log('Отображение уведомления пользователю');
                 tg.showPopup({
                     title: 'Оформление заказа',
@@ -513,44 +492,33 @@ document.addEventListener('DOMContentLoaded', function() {
                     buttons: [{ type: 'close' }]
                 });
                 
-                console.log('Установка таймера для длительной обработки');
-                let timeoutId = setTimeout(() => {
-                    console.log('Сработал таймер длительной обработки');
-                    tg.showPopup({
-                        title: 'Обработка заказа',
-                        message: 'Обработка заказа занимает больше времени, чем обычно. Пожалуйста, подождите.',
-                        buttons: [{ type: 'close' }]
-                    });
-                }, 10000); // 10 секунд
-                
-                console.log('Установка обработчика события получения QR-кода');
-                tg.onEvent('qr_code_received', function(qrCodeData) {
-                    console.log('Получен QR-код:', qrCodeData);
-                    clearTimeout(timeoutId);
-                    console.log('Таймер длительной обработки отменен');
-                    displayQRCode(qrCodeData);
-                    console.log('QR-код отображен пользователю');
-                    cart = {};
-                    console.log('Корзина очищена');
-                    updateCartDisplay();
-                    console.log('Отображение корзины обновлено');
-                    updateMainButton();
-                    console.log('Главная кнопка обновлена');
+                // Ожидание ответа от бота с URL QRIS
+                tg.onEvent('viewportChanged', function(){
+                    if (tg.isExpanded) {
+                        tg.onEvent('writeAccessRequested', function(isGranted) {
+                            if (isGranted) {
+                                tg.readTextFromClipboard(function(clipboardText) {
+                                    try {
+                                        const response = JSON.parse(clipboardText);
+                                        if (response.qris_url) {
+                                            displayQRIS(response.qris_url);
+                                        } else {
+                                            console.error('URL QRIS не получен');
+                                            tg.showAlert('Не удалось получить QR-код для оплаты. Пожалуйста, попробуйте еще раз.');
+                                        }
+                                    } catch (e) {
+                                        console.error('Ошибка при обработке ответа:', e);
+                                        tg.showAlert('Произошла ошибка при обработке данных оплаты. Пожалуйста, попробуйте еще раз.');
+                                    }
+                                });
+                            }
+                        });
+                        tg.requestWriteAccess();
+                    }
                 });
             } catch (error) {
                 console.error('Ошибка при отправке данных в Telegram:', error);
-                console.error('Стек вызовов:', error.stack);
-                
-                if (error.message.includes('FLOOD_WAIT')) {
-                    console.log('Обнаружена ошибка FLOOD_WAIT');
-                    tg.showAlert('Слишком много запросов. Пожалуйста, подождите немного и попробуйте снова.');
-                } else if (error.message.includes('USER_DEACTIVATED')) {
-                    console.log('Обнаружена ошибка USER_DEACTIVATED');
-                    tg.showAlert('Ваш аккаунт деактивирован. Пожалуйста, свяжитесь с поддержкой Telegram.');
-                } else {
-                    console.log('Обнаружена неизвестная ошибка');
-                    tg.showAlert('Произошла ошибка при отправке заказа. Пожалуйста, попробуйте еще раз.');
-                }
+                tg.showAlert('Произошла ошибка при отправке заказа. Пожалуйста, попробуйте еще раз.');
                 
                 if (retryCount < maxRetries) {
                     retryCount++;
@@ -559,59 +527,51 @@ document.addEventListener('DOMContentLoaded', function() {
                         console.log(`Начало повторной попытки отправки ${retryCount}`);
                         tg.showAlert(`Повторная попытка отправки заказа (${retryCount}/${maxRetries})...`);
                         placeOrder();
-                    }, 2000 * retryCount); // Увеличиваем интервал с каждой попыткой
+                    }, 2000 * retryCount);
                 } else {
                     console.log('Достигнуто максимальное количество попыток');
                     tg.showAlert('Не удалось отправить заказ после нескольких попыток. Пожалуйста, попробуйте позже.');
                     retryCount = 0;
-                    console.log('Счетчик попыток сброшен');
                 }
                 return;
             }
             
-            // Сброс счетчика попыток при успешной отправке
             retryCount = 0;
-            console.log('Счетчик попыток сброшен после успешной отправки');
             console.log('Завершение функции placeOrder');
         }
 
-        function displayQRCode(qrCodeUrl) {
-            // Создаем новый элемент изображения для QR-кода
-            let qrCodeImg = document.createElement('img');
-            qrCodeImg.src = qrCodeUrl;
-            qrCodeImg.alt = 'QR-код для оплаты';
-            qrCodeImg.style.maxWidth = '100%';
-            qrCodeImg.onerror = function() {
-                console.error('Ошибка при загрузке QR-кода');
-                tg.showAlert('Не удалось загрузить QR-код. Пожалуйста, попробуйте еще раз.');
+        function displayQRIS(qrisUrl) {
+            let qrisImg = document.createElement('img');
+            qrisImg.src = qrisUrl;
+            qrisImg.alt = 'QRIS для оплаты';
+            qrisImg.style.maxWidth = '100%';
+            qrisImg.onerror = function() {
+                console.error('Ошибка при загрузке QRIS');
+                tg.showAlert('Не удалось загрузить QR-код для оплаты. Пожалуйста, попробуйте еще раз.');
             };
             
-            // Создаем контейнер для QR-кода
-            let qrCodeContainer = document.createElement('div');
-            qrCodeContainer.id = 'qrCodeContainer';
-            qrCodeContainer.style.position = 'fixed';
-            qrCodeContainer.style.top = '50%';
-            qrCodeContainer.style.left = '50%';
-            qrCodeContainer.style.transform = 'translate(-50%, -50%)';
-            qrCodeContainer.style.backgroundColor = 'white';
-            qrCodeContainer.style.padding = '20px';
-            qrCodeContainer.style.borderRadius = '10px';
-            qrCodeContainer.style.boxShadow = '0 0 10px rgba(0,0,0,0.5)';
+            let qrisContainer = document.createElement('div');
+            qrisContainer.id = 'qrisContainer';
+            qrisContainer.style.position = 'fixed';
+            qrisContainer.style.top = '50%';
+            qrisContainer.style.left = '50%';
+            qrisContainer.style.transform = 'translate(-50%, -50%)';
+            qrisContainer.style.backgroundColor = 'white';
+            qrisContainer.style.padding = '20px';
+            qrisContainer.style.borderRadius = '10px';
+            qrisContainer.style.boxShadow = '0 0 10px rgba(0,0,0,0.5)';
             
-            // Добавляем изображение QR-кода в контейнер
-            qrCodeContainer.appendChild(qrCodeImg);
+            qrisContainer.appendChild(qrisImg);
             
-            // Добавляем кнопку закрытия
             let closeButton = document.createElement('button');
             closeButton.textContent = 'Закрыть';
             closeButton.style.marginTop = '10px';
             closeButton.onclick = function() {
-                document.body.removeChild(qrCodeContainer);
+                document.body.removeChild(qrisContainer);
             };
-            qrCodeContainer.appendChild(closeButton);
+            qrisContainer.appendChild(closeButton);
             
-            // Добавляем контейнер с QR-кодом на страницу
-            document.body.appendChild(qrCodeContainer);
+            document.body.appendChild(qrisContainer);
         }
 
         function playTestSound() {
@@ -658,7 +618,6 @@ function updateVoiceActivityDisplay(level) {
 
 function logCartState() {
     console.log('Текущее состояние корзины:');
-    for (letояние корзины:');
     for (let id in cart) {
         console.log(`${id}: ${JSON.stringify(cart[id])}`);
     }
@@ -674,119 +633,3 @@ window.addEventListener('offline', function() {
     console.log('Соединение потеряно');
     tg.showAlert('Соединение потеряно. Пожалуйста, проверьте подключение к интернету.');
 });
-
-function placeOrder() {
-    console.log('Начало функции placeOrder');
-    console.log('Версия WebApp:', tg.version);
-    console.log('Платформа:', tg.platform);
-    console.log('Тема:', tg.colorScheme);
-    console.log('Язык пользователя:', tg.initDataUnsafe?.user?.language_code);
-
-    let order = Object.values(cart).map(item => ({
-        name: item.name,
-        quantity: item.quantity,
-        price: item.price
-    }));
-    let total = Object.values(cart).reduce((sum, item) => sum + item.price * item.quantity, 0);
-    
-    console.log('Подготовленный заказ:', JSON.stringify(order, null, 2));
-    console.log('Общая сумма заказа:', total);
-    
-    try {
-        validateOrder(order);
-    } catch (error) {
-        console.error('Ошибка валидации заказа:', error);
-        tg.showAlert('Ошибка в данных заказа. Пожалуйста, проверьте корзину и попробуйте снова.');
-        return;
-    }
-    
-    let dataToSend = JSON.stringify({ order, total });
-    console.log('Данные для отправки в Telegram:', dataToSend);
-    
-    try {
-        console.log('Попытка отправки данных в Telegram...');
-        tg.sendData(dataToSend);
-        
-        console.log('Данные успешно отправлены в Telegram');
-        
-        console.log('Отображение уведомления пользователю');
-        tg.showPopup({
-            title: 'Оформление заказа',
-            message: 'Заказ оформляется. Пожалуйста, подождите...',
-            buttons: [{ type: 'close' }]
-        });
-        
-        // Здесь мы ожидаем получения токена от бота
-        tg.onEvent('order_token_received', function(tokenData) {
-            console.log('Получен токен заказа:', tokenData);
-            if (tokenData && tokenData.token) {
-                // Отправляем токен на сервер для создания заказа
-                sendOrderToServer(tokenData.token, order, total);
-            } else {
-                console.error('Получен некорректный токен');
-                tg.showAlert('Ошибка при создании заказа. Пожалуйста, попробуйте еще раз.');
-            }
-        });
-        
-    } catch (error) {
-        handleOrderError(error);
-    }
-}
-
-function sendOrderToServer(token, order, total) {
-    fetch('/create-order', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ order, total })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            console.log('Заказ успешно создан на сервере');
-            displayQRCode(data.qrCodeUrl);
-            clearCart();
-        } else {
-            throw new Error('Ошибка при создании заказа на сервере');
-        }
-    })
-    .catch(error => {
-        console.error('Ошибка при отправке заказа на сервер:', error);
-        tg.showAlert('Произошла ошибка при создании заказа. Пожалуйста, попробуйте еще раз.');
-    });
-}
-
-function handleOrderError(error) {
-    console.error('Ошибка при отправке данных в Telegram:', error);
-    console.error('Стек вызовов:', error.stack);
-    
-    if (error.message.includes('FLOOD_WAIT')) {
-        tg.showAlert('Слишком много запросов. Пожалуйста, подождите немного и попробуйте снова.');
-    } else if (error.message.includes('USER_DEACTIVATED')) {
-        tg.showAlert('Ваш аккаунт деактивирован. Пожалуйста, свяжитесь с поддержкой Telegram.');
-    } else {
-        tg.showAlert('Произошла ошибка при отправке заказа. Пожалуйста, попробуйте еще раз.');
-    }
-    
-    if (retryCount < maxRetries) {
-        retryCount++;
-        console.log(`Попытка повторной отправки ${retryCount}/${maxRetries}`);
-        setTimeout(() => {
-            console.log(`Начало повторной попытки отправки ${retryCount}`);
-            tg.showAlert(`Повторная попытка отправки заказа (${retryCount}/${maxRetries})...`);
-            placeOrder();
-        }, 2000 * retryCount);
-    } else {
-        console.log('Достигнуто максимальное количество попыток');
-        tg.showAlert('Не удалось отправить заказ после нескольких попыток. Пожалуйста, попробуйте позже.');
-        retryCount = 0;
-    }
-}
-
-function clearCart() {
-    cart = {};
-    updateCartDisplay();
-    updateMainButton();
-}
