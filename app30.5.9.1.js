@@ -457,6 +457,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
 
+
         function placeOrder() {
             console.log('Начало функции placeOrder');
             
@@ -492,6 +493,32 @@ document.addEventListener('DOMContentLoaded', function() {
                     message: 'Заказ оформляется. Пожалуйста, подождите...',
                     buttons: [{ type: 'close' }]
                 });
+                
+                // Ожидание ответа от бота с URL QRIS
+                tg.onEvent('viewportChanged', function(){
+                    if (tg.isExpanded) {
+                        tg.onEvent('writeAccessRequested', function(isGranted) {
+                            if (isGranted) {
+                                tg.readTextFromClipboard(function(clipboardText) {
+                                    try {
+                                        const response = JSON.parse(clipboardText);
+                                        if (response.qris_url) {
+                                            displayQRIS(response.qris_url);
+                                        } else {
+                                            console.error('URL QRIS не получен');
+                                            tg.showAlert('Не удалось получить QR-код для оплаты. Пожалуйста, попробуйте еще раз.');
+                                        }
+                                    } catch (e) {
+                                        console.error('Ошибка при обработке ответа:', e);
+                                        tg.showAlert('Произошла ошибка при обработке данных оплаты. Пожалуйста, попробуйте еще раз.');
+                                    }
+                                });
+                            }
+                        });
+                        tg.requestWriteAccess();
+                    }
+                });
+                
             } catch (error) {
                 console.error('Ошибка при отправке данных в Telegram:', error);
                 tg.showAlert('Произошла ошибка при отправке заказа. Пожалуйста, попробуйте еще раз.');
@@ -515,6 +542,64 @@ document.addEventListener('DOMContentLoaded', function() {
             retryCount = 0;
             console.log('Завершение функции placeOrder');
         }
+        // function placeOrder() {
+        //     console.log('Начало функции placeOrder');
+            
+        //     // Формируем массив товаров
+        //     let orderItems = Object.values(cart).map(item => ({
+        //         name: item.name,
+        //         quantity: item.quantity,
+        //         price: item.price
+        //     }));
+            
+        //     console.log('Подготовленный заказ:', JSON.stringify(orderItems, null, 2));
+            
+        //     try {
+        //         validateOrder(orderItems);
+        //     } catch (error) {
+        //         console.error('Ошибка валидации заказа:', error);
+        //         tg.showAlert('Ошибка в данных заказа. Пожалуйста, проверьте корзину и попробуйте снова.');
+        //         return;
+        //     }
+            
+        //     // Отправляем только массив товаров
+        //     let dataToSend = JSON.stringify(orderItems);
+        //     console.log('Данные для отправки в Telegram:', dataToSend);
+            
+        //     try {
+        //         console.log('Попытка отправки данных в Telegram...');
+        //         tg.sendData(dataToSend);
+        //         console.log('Данные успешно отправлены в Telegram');
+                
+        //         console.log('Отображение уведомления пользователю');
+        //         tg.showPopup({
+        //             title: 'Оформление заказа',
+        //             message: 'Заказ оформляется. Пожалуйста, подождите...',
+        //             buttons: [{ type: 'close' }]
+        //         });
+        //     } catch (error) {
+        //         console.error('Ошибка при отправке данных в Telegram:', error);
+        //         tg.showAlert('Произошла ошибка при отправке заказа. Пожалуйста, попробуйте еще раз.');
+                
+        //         if (retryCount < maxRetries) {
+        //             retryCount++;
+        //             console.log(`Попытка повторной отправки ${retryCount}/${maxRetries}`);
+        //             setTimeout(() => {
+        //                 console.log(`Начало повторной попытки отправки ${retryCount}`);
+        //                 tg.showAlert(`Повторная попытка отправки заказа (${retryCount}/${maxRetries})...`);
+        //                 placeOrder();
+        //             }, 2000 * retryCount);
+        //         } else {
+        //             console.log('Достигнуто максимальное количество попыток');
+        //             tg.showAlert('Не удалось отправить заказ после нескольких попыток. Пожалуйста, попробуйте позже.');
+        //             retryCount = 0;
+        //         }
+        //         return;
+        //     }
+            
+        //     retryCount = 0;
+        //     console.log('Завершение функции placeOrder');
+        // }
         // function placeOrder() {
         //     console.log('Начало функции placeOrder');
         //     let order = Object.values(cart).map(item => ({
