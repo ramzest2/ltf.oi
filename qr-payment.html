@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR Code Payment</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            background-color: var(--tg-theme-bg-color, #ffffff);
+            color: var(--tg-theme-text-color, #000000);
+            font-family: Arial, sans-serif;
+        }
+        .qr-container {
+            text-align: center;
+            padding: 20px;
+        }
+        .qr-image {
+            max-width: 80%;
+            margin: 20px 0;
+        }
+        .amount {
+            font-size: 1.2em;
+            margin: 10px 0;
+            color: var(--tg-theme-hint-color, #999999);
+        }
+    </style>
+</head>
+<body>
+    <div class="qr-container">
+        <div class="amount" id="amount"></div>
+        <img id="qr-code" class="qr-image" src="" alt="Payment QR Code">
+        <div>Scan QR code with GOPAY app</div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const tg = window.Telegram.WebApp;
+            tg.expand();
+            
+            // Получаем параметры из URL
+            const urlParams = new URLSearchParams(window.location.search);
+            const qrUrl = urlParams.get('qr');
+            const amount = urlParams.get('amount');
+            
+            // Устанавливаем QR-код и сумму
+            if (qrUrl) {
+                document.getElementById('qr-code').src = qrUrl;
+            }
+            if (amount) {
+                document.getElementById('amount').textContent = `Amount: ${amount} IDR`;
+            }
+        });
+    </script>
+</body>
+</html>
