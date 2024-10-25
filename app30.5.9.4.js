@@ -426,7 +426,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 tg.showAlert(`Товар "${item}" не найден в меню`);
             }
         }   
-          function findMenuItem(itemName) {
+        function findMenuItem(itemName) {
             const menu = [
                 {id: 'shawarma_chicken', name: 'Шаурма с курицей', price: 25000},
                 {id: 'shawarma_beef', name: 'Шаурма с говядиной', price: 40000},
@@ -576,7 +576,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             }, 5000); // Проверка каждые 5 секунд
         }      
-          function showPaymentSuccess() {
+        function showPaymentSuccess() {
             const statusElement = document.getElementById('payment-status');
             statusElement.innerHTML = '✅ Оплата успешно завершена!';
             statusElement.style.display = 'block';
