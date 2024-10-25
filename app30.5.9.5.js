@@ -452,79 +452,39 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
         
+
         function placeOrder() {
-            console.log('=' * 50);
-            console.log('1. Начало оформления заказа');
-        
-            // Формируем данные заказа
-            const orderData = Object.entries(cart).map(([id, item]) => [item.name, item.price]);
-            const totalAmount = Object.values(cart).reduce((sum, item) => sum + item.price * item.quantity, 0);
-        
-            console.log('2. Подготовленные данные заказа:', {
-                order: orderData,
-                total: totalAmount
-            });
-        
-            // Показываем загрузку
-            document.getElementById('loading-spinner').style.display = 'block';
-            console.log('3. Показан индикатор загрузки');
-        
-            // Запрашиваем QR код
-            console.log('4. Отправка запроса на сервер');
-            fetch('/api/create-payment', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-Telegram-User-Id': tg.initDataUnsafe.user.id.toString()
-                },
-                body: JSON.stringify({
-                    order: orderData,
-                    total: totalAmount,
-                    user_id: tg.initDataUnsafe.user.id,
-                    username: tg.initDataUnsafe.user.username || `user_${tg.initDataUnsafe.user.id}`
-                })
-            })
-            .then(response => {
-                console.log('5. Получен ответ от сервера');
-                console.log(`6. Статус ответа: ${response.status}`);
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                return response.json();
-            })
-            .then(data => {
-                console.log('7. Данные распарсены:', data);
+            console.log('Начало функции placeOrder');
+            
+            try {
+                // Преобразуем корзину в формат, ожидаемый сервером
+                let order = Object.values(cart).map(item => [
+                    item.name,
+                    item.price  // Просто передаем цену, без учета количества
+                ]);
                 
-                if (data.status === 'success' && data.qr_code) {
-                    console.log('8. QR код получен успешно');
-                    // Показываем QR код
-                    const qrImage = document.getElementById('qr-image');
-                    qrImage.src = `data:image/png;base64,${data.qr_code}`;
-                    document.getElementById('qr-container').style.display = 'block';
-                    document.getElementById('overlay').style.display = 'block';
-                    
-                    // Запускаем таймер и проверку статуса
-                    if (data.order_id) {
-                        currentOrderId = data.order_id;
-                        startPaymentTimer(data.expiry_time || Date.now() + PAYMENT_TIMEOUT);
-                        checkPaymentStatus(data.order_id);
-                    }
-                    
-                    console.log('9. QR код отображен');
-                } else {
-                    console.error('8. Ошибка в ответе:', data.message);
-                    throw new Error(data.message || 'Ошибка при создании платежа');
-                }
-            })
-            .catch(error => {
-                console.error('!!! Ошибка при обработке запроса:', error);
-                showError(`Ошибка при создании платежа: ${error.message}`);
-            })
-            .finally(() => {
-                document.getElementById('loading-spinner').style.display = 'none';
-                console.log('10. Загрузка завершена');
-                console.log('=' * 50);
-            });
+                let total = Object.values(cart).reduce((sum, item) => 
+                    sum + item.price, 0  // Считаем общую сумму без учета количества
+                );
+                
+                console.log('Подготовленный заказ:', JSON.stringify(order, null, 2));
+                console.log('Общая сумма заказа:', total);
+                
+                validateOrder(order);
+                
+                // Формируем данные в формате, ожидаемом сервером
+                let dataToSend = {
+                    order: order,
+                    total: total
+                };
+                
+                console.log('Данные для отправки в Telegram:', JSON.stringify(dataToSend));
+                tg.sendData(JSON.stringify(dataToSend));
+                
+            } catch (error) {
+                console.error('Ошибка при оформлении заказа:', error);
+                tg.showAlert('Произошла ошибка при оформлении заказа. Пожалуйста, попробуйте еще раз.');
+            }
         }
         
         // Функция для отображения QR кода
