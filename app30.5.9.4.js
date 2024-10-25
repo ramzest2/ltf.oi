@@ -453,9 +453,21 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         function placeOrder() {
-            console.log('Начало функции placeOrder');
+            console.log('=' * 50);
+            console.log('1. Начало функции placeOrder');
             
             try {
+                // Проверяем инициализацию WebApp
+                if (!tg || !tg.isInitialized) {
+                    console.error('2. Ошибка: Telegram WebApp не инициализирован');
+                    throw new Error('Telegram WebApp не инициализирован');
+                }
+                console.log('2. WebApp успешно инициализирован');
+        
+                // Показываем индикатор загрузки
+                document.getElementById('loading-spinner').style.display = 'block';
+                console.log('3. Показан индикатор загрузки');
+        
                 // Собираем данные корзины
                 const cartData = {
                     total: Object.values(cart).reduce((sum, item) => sum + item.price * item.quantity, 0),
@@ -465,59 +477,57 @@ document.addEventListener('DOMContentLoaded', function() {
                         quantity: item.quantity
                     }))
                 };
+                console.log('4. Подготовлены данные корзины:', cartData);
         
-                console.log('Подготовленные данные корзины:', cartData);
-        
-                // Отправляем данные в бот через WebApp
-                window.Telegram.WebApp.sendData(JSON.stringify(cartData));
-                
-                // Слушаем ответ от бота
-                window.Telegram.WebApp.onEvent('viewportChanged', function(event) {
-                    try {
-                        const urlParams = new URLSearchParams(window.location.search);
-                        const paymentData = urlParams.get('data');
+                // Отправляем данные в бот
+                console.log('5. Отправка данных в бот...');
+                tg.sendData(JSON.stringify(cartData))
+                    .then(response => {
+                        console.log('6. Получен ответ от бота:', response);
+                        const data = JSON.parse(response);
                         
-                        if (paymentData) {
-                            const data = JSON.parse(decodeURIComponent(paymentData));
-                            
-                            if (data.qr_code) {
-                                currentOrderId = data.order_id;
-                                displayQRCode(data.qr_code, data.expiry_time);
-                                startPaymentTimer(data.expiry_time);
-                                checkPaymentStatus(data.order_id);
-                            } else {
-                                throw new Error('QR код не получен от бота');
-                            }
+                        if (data.status === 'success') {
+                            console.log('7. Успешный ответ, отображаем QR код');
+                            displayQRCode(data.qr_code, data.expiry_time);
+                            startPaymentTimer(data.expiry_time);
+                            checkPaymentStatus(data.order_id);
+                        } else {
+                            console.error('7. Ошибка в ответе:', data.message);
+                            throw new Error(data.message || 'Ошибка при создании заказа');
                         }
-                    } catch (error) {
-                        console.error('Ошибка при обработке ответа от бота:', error);
-                        showError('Ошибка при получении QR-кода. Пожалуйста, попробуйте еще раз.');
-                    }
-                });
+                    })
+                    .catch(error => {
+                        console.error('8. Ошибка при обработке ответа:', error);
+                        showError(error.message);
+                    })
+                    .finally(() => {
+                        console.log('9. Завершение обработки');
+                        document.getElementById('loading-spinner').style.display = 'none';
+                    });
         
             } catch (error) {
                 console.error('Ошибка при оформлении заказа:', error);
+                document.getElementById('loading-spinner').style.display = 'none';
                 showError(error.message);
             }
         }
-        function displayQRCode(qrImageUrl, expiryTime) {
+        
+        // Функция для отображения QR кода
+        function displayQRCode(qrBase64, expiryTime) {
+            console.log('Начало отображения QR кода');
             const qrContainer = document.getElementById('qr-container');
             const qrImage = document.getElementById('qr-image');
-            const qrCaption = document.getElementById('qr-caption');
-            const overlay = document.getElementById('overlay');
             
-            qrImage.src = qrImageUrl;
-            qrImage.onload = () => {
-                qrContainer.style.display = 'block';
-                overlay.style.display = 'block';
-                qrContainer.classList.add('fade-in');
-            };
+            console.log('Установка QR кода в изображение');
+            qrImage.src = `data:image/png;base64,${qrBase64}`;
             
-            qrCaption.textContent = 'Отсканируйте QR-код для оплаты';
+            console.log('Отображение контейнера с QR кодом');
+            qrContainer.style.display = 'block';
+            document.getElementById('overlay').style.display = 'block';
             
-            document.getElementById('close-qr').onclick = () => {
-                closeQRCode();
-            };
+            console.log('Запуск таймера оплаты');
+            startPaymentTimer(expiryTime);
+            console.log('QR код успешно отображен');
         }
 
         function closeQRCode() {
