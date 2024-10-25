@@ -453,60 +453,47 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
 function placeOrder() {
-    console.log('Начало оформления заказа');
-    
-    try {
-        // Собираем данные корзины
-        const cartData = {
-            total: Object.values(cart).reduce((sum, item) => sum + item.price * item.quantity, 0),
-            order: Object.entries(cart).map(([id, item]) => ({
-                name: item.name,
-                price: item.price,
-                quantity: item.quantity
-            }))
-        };
+    console.log('=' * 50);
+    console.log('1. Начало оформления заказа');
 
-        console.log('Подготовленные данные корзины:', cartData);
+    // Показываем загрузку
+    document.getElementById('loading-spinner').style.display = 'block';
+    console.log('2. Показан индикатор загрузки');
 
-        // Показываем индикатор загрузки
-        document.getElementById('loading-spinner').style.display = 'block';
-        document.getElementById('overlay').style.display = 'block';
-
-        // Делаем прямой fetch запрос к API вместо использования tg.sendData
-        fetch('/api/create-payment', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Telegram-User-Id': window.Telegram.WebApp.initDataUnsafe.user.id
-            },
-            body: JSON.stringify(cartData)
-        })
-        .then(response => response.json())
-        .then(data => {
-            console.log('Получен ответ от сервера:', data);
-            if (data.status === 'success' && data.qr_code) {
-                // Показываем QR код прямо в Mini App
-                displayQRCode(data.qr_code, data.expiry_time);
-                startPaymentTimer(data.expiry_time);
-                checkPaymentStatus(data.order_id);
-            } else {
-                throw new Error(data.message || 'Ошибка при создании заказа');
-            }
-        })
-        .catch(error => {
-            console.error('Ошибка:', error);
-            showError(error.message);
-        })
-        .finally(() => {
-            document.getElementById('loading-spinner').style.display = 'none';
-        });
-
-    } catch (error) {
-        console.error('Ошибка при оформлении заказа:', error);
+    // Запрашиваем QR код
+    console.log('3. Отправка запроса на сервер');
+    fetch('/api/create-payment', {
+        method: 'POST'
+    })
+    .then(response => {
+        console.log('4. Получен ответ от сервера');
+        console.log(`5. Статус ответа: ${response.status}`);
+        return response.json();
+    })
+    .then(data => {
+        console.log('6. Данные распарсены');
+        console.log(`7. Статус ответа: ${data.status}`);
+        
+        if (data.status === 'success') {
+            console.log('8. QR код получен успешно');
+            // Показываем QR код
+            const qrImage = document.getElementById('qr-image');
+            qrImage.src = `data:image/png;base64,${data.qr_code}`;
+            document.getElementById('qr-container').style.display = 'block';
+            console.log('9. QR код отображен');
+        } else {
+            console.error('8. Ошибка в ответе:', data.message);
+        }
+    })
+    .catch(error => {
+        console.error('!!! Ошибка при обработке запроса:', error);
+    })
+    .finally(() => {
         document.getElementById('loading-spinner').style.display = 'none';
-        showError(error.message);
-    }
-}        
+        console.log('10. Загрузка завершена');
+        console.log('=' * 50);
+    });
+}      
         
         // Функция для отображения QR кода
         function displayQRCode(qrBase64, expiryTime) {
