@@ -456,42 +456,45 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log('Начало функции placeOrder');
             
             try {
-                let order = Object.values(cart).map(item => [item.name, item.price]);
-                let total = Object.values(cart).reduce((sum, item) => sum + item.price * item.quantity, 0);
+                // Собираем данные корзины
+                const cartData = {
+                    total: Object.values(cart).reduce((sum, item) => sum + item.price * item.quantity, 0),
+                    order: Object.entries(cart).map(([id, item]) => ({
+                        name: item.name,
+                        price: item.price,
+                        quantity: item.quantity
+                    }))
+                };
+        
+                console.log('Подготовленные данные корзины:', cartData);
+        
+                // Отправляем данные в бот через WebApp
+                window.Telegram.WebApp.sendData(JSON.stringify(cartData));
                 
-                validateOrder(order);
-                
-                // Показываем индикатор загрузки
-                document.getElementById('loading-spinner').style.display = 'block';
-                document.getElementById('overlay').style.display = 'block';
-                
-                // Отправляем заказ на сервер
-                fetch('/api/create-order', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ order, total })
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.qr_code) {
-                        currentOrderId = data.order_id;
-                        displayQRCode(data.qr_code, data.expiry_time);
-                        startPaymentTimer(data.expiry_time);
-                        checkPaymentStatus(data.order_id);
-                    } else {
-                        throw new Error('QR код не получен от сервера');
+                // Слушаем ответ от бота
+                window.Telegram.WebApp.onEvent('viewportChanged', function(event) {
+                    try {
+                        const urlParams = new URLSearchParams(window.location.search);
+                        const paymentData = urlParams.get('data');
+                        
+                        if (paymentData) {
+                            const data = JSON.parse(decodeURIComponent(paymentData));
+                            
+                            if (data.qr_code) {
+                                currentOrderId = data.order_id;
+                                displayQRCode(data.qr_code, data.expiry_time);
+                                startPaymentTimer(data.expiry_time);
+                                checkPaymentStatus(data.order_id);
+                            } else {
+                                throw new Error('QR код не получен от бота');
+                            }
+                        }
+                    } catch (error) {
+                        console.error('Ошибка при обработке ответа от бота:', error);
+                        showError('Ошибка при получении QR-кода. Пожалуйста, попробуйте еще раз.');
                     }
-                })
-                .catch(error => {
-                    console.error('Ошибка при создании заказа:', error);
-                    showError('Ошибка при создании заказа. Пожалуйста, попробуйте еще раз.');
-                })
-                .finally(() => {
-                    document.getElementById('loading-spinner').style.display = 'none';
                 });
-                
+        
             } catch (error) {
                 console.error('Ошибка при оформлении заказа:', error);
                 showError(error.message);
