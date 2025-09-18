@@ -1,13 +1,17 @@
 // Глобальный обработчик ошибок
 window.onerror = function(message, source, lineno, colno, error) {
     console.error('Глобальная ошибка:', message, 'Источник:', source, 'Строка:', lineno, 'Колонка:', colno, 'Объект ошибки:', error);
+    tg.showAlert('Произошла ошибка. Пожалуйста, попробуйте еще раз или обратитесь в поддержку.');
 };
 
-// Обработчик необработанных отклонений промисов
+// Улучшенный обработчик необработанных отклонений промисов
 window.addEventListener('unhandledrejection', function(event) {
+    console.error('Необработанное отклонение промиса:', event.reason);
     if (event.reason && event.reason.type === 'BOT_RESPONSE_TIMEOUT') {
         console.error('Превышено время ожидания ответа от бота');
         tg.showAlert('Превышено время ожидания ответа. Пожалуйста, попробуйте еще раз.');
+    } else {
+        tg.showAlert('Произошла неизвестная ошибка. Пожалуйста, попробуйте еще раз.');
     }
 });
 
@@ -15,6 +19,8 @@ let audioContext;
 let tg;
 let socket;
 let cart = {};
+let retryCount = 0;
+const maxRetries = 3;
 
 function initAudioContext() {
     if (!audioContext) {
@@ -74,6 +80,14 @@ function connectWebSocket() {
     return socket;
 }
 
+// Добавление механизма heartbeat для WebSocket
+function heartbeat() {
+    if (socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({ type: 'heartbeat' }));
+    }
+}
+setInterval(heartbeat, 30000);
+
 function playAudio(arrayBuffer) {
     if (!arrayBuffer || arrayBuffer.byteLength === 0) {
         console.error('Получены пустые аудиоданные');
@@ -121,9 +135,10 @@ document.addEventListener('DOMContentLoaded', function() {
         tg.MainButton.textColor = '#FFFFFF';
         tg.MainButton.color = '#2cab37';
 
-        if (!('AudioContext' in window) && !('webkitAudioContext' in window)) {
+        // Проверка поддержки Web Audio API
+        if (!window.AudioContext && !window.webkitAudioContext) {
             console.error('Web Audio API не поддерживается в этом браузере.');
-            tg.showAlert('Ваш браузер не поддерживает воспроизведение аудио. Попробуйте использовать другой браузер.');
+            tg.showAlert('Ваш браузер не поддерживает необходимые аудио функции. Попробуйте использовать другой браузер.');
         }
 
         socket = connectWebSocket();
@@ -183,7 +198,6 @@ document.addEventListener('DOMContentLoaded', function() {
             console.trace('Трассировка вызова addToCart');
             console.log(`Начало addToCart: id=${id}, name=${name}, price=${price}, quantity=${quantity}`);
 
-            // ИЗМЕНЕНИЕ: Добавлена проверка на корректность цены
             if (price < 1000) {
                 console.error(`Попытка добавить товар с некорректной ценой: ${price}. Операция отменена.`);
                 return;
@@ -209,7 +223,6 @@ document.addEventListener('DOMContentLoaded', function() {
             updateMainButton();
         }
 
-        // ИЗМЕНЕНИЕ: Изменен селектор, чтобы исключить кнопку шаурмы
         document.querySelectorAll('.btn:not(#btn-shawarma)').forEach(btn => {
             if (btn) {
                 btn.addEventListener('click', function() {
@@ -432,26 +445,130 @@ document.addEventListener('DOMContentLoaded', function() {
             return menu.find(item => item.name.toLowerCase().includes(itemName.toLowerCase()));
         }
 
+        // Валидация данных перед отправкой заказа
+        function validateOrder(order) {
+            if (!Array.isArray(order) || order.length === 0) {
+                throw new Error('Некорректный формат заказа');
+            }
+            for (let item of order) {
+                if (!item[0] || typeof item[1] !== 'number') {
+                    throw new Error('Некорректные данные товара в заказе');
+                }
+            }
+        }
+        
         function placeOrder() {
-            let order = Object.values(cart).map(item => ({
-                name: item.name,
-                quantity: item.quantity,
-                price: item.price
-            }));
+            console.log('Начало функции placeOrder');
+            
+            // Преобразуем корзину в формат, ожидаемый сервером
+            let order = Object.values(cart).map(item => [item.name, item.price]);
+            
             let total = Object.values(cart).reduce((sum, item) => sum + item.price * item.quantity, 0);
             
-            console.log('Отправка заказа:', JSON.stringify({ order, total }, null, 2));
+            console.log('Подготовленный заказ:', JSON.stringify(order, null, 2));
+            console.log('Общая сумма заказа:', total);
             
             try {
-                tg.sendData(JSON.stringify({ order, total }));
-                tg.showAlert('Заказ оформлен!');
-                cart = {};
-                updateCartDisplay();
-                updateMainButton();
+                validateOrder(order);
+                
+                // Формируем данные в формате, ожидаемом сервером
+                let dataToSend = {
+                    order: order,
+                    total: total
+                };
+                
+                console.log('Данные для отправки в Telegram:', JSON.stringify(dataToSend));
+                
+                tg.sendData(JSON.stringify(dataToSend));
+                console.log('Данные успешно отправлены в Telegram');
+                
+                console.log('Отображение уведомления пользователю');
+                tg.showPopup({
+                    title: 'Оформление заказа',
+                    message: 'Заказ оформляется. Пожалуйста, подождите...',
+                    buttons: [{ type: 'close' }]
+                });
+                
+                // Ожидание ответа от бота с URL QRIS
+                tg.onEvent('viewportChanged', function(){
+                    if (tg.isExpanded) {
+                        tg.onEvent('writeAccessRequested', function(isGranted) {
+                            if (isGranted) {
+                                tg.readTextFromClipboard(function(clipboardText) {
+                                    try {
+                                        const response = JSON.parse(clipboardText);
+                                        if (response.qris_url) {
+                                            displayQRIS(response.qris_url);
+                                        } else {
+                                            console.error('URL QRIS не получен');
+                                            tg.showAlert('Не удалось получить QR-код для оплаты. Пожалуйста, попробуйте еще раз.');
+                                        }
+                                    } catch (e) {
+                                        console.error('Ошибка при обработке ответа:', e);
+                                        tg.showAlert('Произошла ошибка при обработке данных оплаты. Пожалуйста, попробуйте еще раз.');
+                                    }
+                                });
+                            }
+                        });
+                        tg.requestWriteAccess();
+                    }
+                });
             } catch (error) {
-                console.error('Error sending data to bot:', error);
+                console.error('Ошибка при отправке данных в Telegram:', error);
                 tg.showAlert('Произошла ошибка при отправке заказа. Пожалуйста, попробуйте еще раз.');
+                
+                if (retryCount < maxRetries) {
+                    retryCount++;
+                    console.log(`Попытка повторной отправки ${retryCount}/${maxRetries}`);
+                    setTimeout(() => {
+                        console.log(`Начало повторной попытки отправки ${retryCount}`);
+                        tg.showAlert(`Повторная попытка отправки заказа (${retryCount}/${maxRetries})...`);
+                        placeOrder();
+                    }, 2000 * retryCount);
+                } else {
+                    console.log('Достигнуто максимальное количество попыток');
+                    tg.showAlert('Не удалось отправить заказ после нескольких попыток. Пожалуйста, попробуйте позже.');
+                    retryCount = 0;
+                }
+                return;
             }
+            
+            retryCount = 0;
+            console.log('Завершение функции placeOrder');
+        }
+
+        function displayQRIS(qrisUrl) {
+            let qrisImg = document.createElement('img');
+            qrisImg.src = qrisUrl;
+            qrisImg.alt = 'QRIS для оплаты';
+            qrisImg.style.maxWidth = '100%';
+            qrisImg.onerror = function() {
+                console.error('Ошибка при загрузке QRIS');
+                tg.showAlert('Не удалось загрузить QR-код для оплаты. Пожалуйста, попробуйте еще раз.');
+            };
+            
+            let qrisContainer = document.createElement('div');
+            qrisContainer.id = 'qrisContainer';
+            qrisContainer.style.position = 'fixed';
+            qrisContainer.style.top = '50%';
+            qrisContainer.style.left = '50%';
+            qrisContainer.style.transform = 'translate(-50%, -50%)';
+            qrisContainer.style.backgroundColor = 'white';
+            qrisContainer.style.padding = '20px';
+            qrisContainer.style.borderRadius = '10px';
+            qrisContainer.style.boxShadow = '0 0 10px rgba(0,0,0,0.5)';
+            
+            qrisContainer.appendChild(qrisImg);
+            
+            let closeButton = document.createElement('button');
+            closeButton.textContent = 'Закрыть';
+            closeButton.style.marginTop = '10px';
+            closeButton.onclick = function() {
+                document.body.removeChild(qrisContainer);
+            };
+            qrisContainer.appendChild(closeButton);
+            
+            document.body.appendChild(qrisContainer);
         }
 
         function playTestSound() {
@@ -502,3 +619,14 @@ function logCartState() {
         console.log(`${id}: ${JSON.stringify(cart[id])}`);
     }
 }
+
+// Обработка ошибок сети
+window.addEventListener('online', function() {
+    console.log('Соединение восстановлено');
+    tg.showAlert('Соединение восстановлено. Вы можете продолжить оформление заказа.');
+});
+
+window.addEventListener('offline', function() {
+    console.log('Соединение потеряно');
+    tg.showAlert('Соединение потеряно. Пожалуйста, проверьте подключение к интернету.');
+});
