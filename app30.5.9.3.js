@@ -38,7 +38,7 @@ function initAudioContext() {
 }
 
 function connectWebSocket() {
-    socket = new WebSocket('ws://localhost:3000');
+    socket = new WebSocket('ws://localhost:8000');
     socket.binaryType = 'arraybuffer';
 
     socket.onopen = () => {
