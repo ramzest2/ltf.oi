@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Меню кафе</title>
+    <link rel="stylesheet" href="style6.css" />
+</head>
+<body>
+    <div class="container">
+        <h1>Меню кафе</h1>
+        <div class="inner">
+            <div class="item" id="shawarma-item">
+                <img src="shawarma.jpg" alt="Шаурма" class="img" />
+                <h3>Шаурма</h3>
+                <p class="price" id="shawarma-price">25k рупий</p>
+                <div class="filling-buttons">
+                    <button class="filling-btn" data-filling="chicken" data-emoji="🐓">🐓</button>
+                    <button class="filling-btn" data-filling="beef" data-emoji="🐮">🐮</button>
+                    <button class="filling-btn" data-filling="shrimp" data-emoji="🦐">🦐</button>
+                    <button class="filling-btn" data-filling="falafel" data-emoji="🌱">🌱</button>
+                </div>
+                <button class="btn" id="btn-shawarma">Добавить</button>
+            </div>
+            <div class="item">
+                <img src="pita.jpg" alt="Пита" class="img" />
+                <h3>Пита</h3>
+                <p class="price" id="price-pita">25k рупий</p>
+                <button class="btn" id="btn-pita">Добавить</button>
+            </div>
+            <div class="item">
+                <img src="hummus.jpg" alt="Хумус" class="img" />
+                <h3>Хумус</h3>
+                <p class="price" id="price-hummus">25k рупий</p>
+                <button class="btn" id="btn-hummus">Добавить</button>
+            </div>
+            <div class="item">
+                <img src="chicken_shish.jpg" alt="Шашлык из курицы" class="img" />
+                <h3>Шашлык из курицы</h3>
+                <p class="price" id="price-kebab">35k рупий</p>
+                <button class="btn" id="btn-kebab">Добавить</button>
+            </div>
+            <div class="item">
+                <img src="gozleme.jpg" alt="Гёзлеме" class="img" />
+                <h3>Гёзлеме</h3>
+                <p class="price" id="price-gozleme">25k рупий</p>
+                <button class="btn" id="btn-gozleme">Добавить</button>
+            </div>
+            <div class="item">
+                <img src="lentil_soup.jpg" alt="Чечевичный суп" class="img" />
+                <h3>Чечевичный суп</h3>
+                <p class="price" id="price-soup">20k рупий</p>
+                <button class="btn" id="btn-soup">Добавить</button>
+            </div>
+        </div>
+        <button id="showCartBtn">Показать корзину</button>
+        <div id="cartDisplay" style="display:none;"></div>
+        <button id="sendOrderBtn">Отправить заказ</button>
+    </div>
+    <script src="app44.1.js"></script>
+</body>
+</html>
