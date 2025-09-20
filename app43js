@@ -1,0 +1,253 @@
+// Глобальный обработчик ошибок
+window.onerror = function(message, source, lineno, colno, error) {
+    console.error('Глобальная ошибка:', message, 'Источник:', source, 'Строка:', lineno, 'Колонка:', colno, 'Объект ошибки:', error);
+    if (window.Telegram && window.Telegram.WebApp) {
+        Telegram.WebApp.showAlert('Произошла ошибка. Пожалуйста, попробуйте еще раз или обратитесь в поддержку.');
+    }
+};
+
+// Улучшенный обработчик необработанных отклонений промисов
+window.addEventListener('unhandledrejection', function(event) {
+    console.error('Необработанное отклонение промиса:', event.reason);
+    if (window.Telegram && window.Telegram.WebApp) {
+        Telegram.WebApp.showAlert('Произошла неизвестная ошибка. Пожалуйста, попробуйте еще раз.');
+    }
+});
+
+let cart = {};
+let tg;
+
+// Сохраняем корзину в LocalStorage
+function saveCartToLocalStorage() {
+    localStorage.setItem('cafeCart', JSON.stringify(cart));
+    console.log('Корзина сохранена в LocalStorage');
+}
+
+// Загружаем корзину из LocalStorage
+function loadCartFromLocalStorage() {
+    const savedCart = localStorage.getItem('cafeCart');
+    if (savedCart) {
+        try {
+            cart = JSON.parse(savedCart);
+            updateCartDisplay();
+            updateMainButton();
+            console.log('Корзина загружена из LocalStorage:', cart);
+        } catch (e) {
+            console.error('Ошибка при загрузке корзины из LocalStorage:', e);
+        }
+    }
+}
+
+// Форматирование цены в формате "xxk рупий"
+function formatPrice(price) {
+    return `${(price / 1000).toFixed(0)}k рупий`;
+}
+
+// Обновление текста и видимости кнопки Telegram MainButton
+function updateMainButton() {
+    let total = Object.values(cart).reduce((sum, item) => sum + item.price * item.quantity, 0);
+    if (total > 0) {
+        tg.MainButton.setText(`Заказать (${formatPrice(total)})`);
+        tg.MainButton.show();
+    } else {
+        tg.MainButton.hide();
+    }
+}
+
+// Обновление отображения корзины
+function updateCartDisplay() {
+    const cartDisplay = document.getElementById('cartDisplay');
+    cartDisplay.innerHTML = '';
+    let total = 0;
+    for (let id in cart) {
+        let item = cart[id];
+        let itemTotal = item.price * item.quantity;
+
+        let itemElement = document.createElement('div');
+        itemElement.textContent = `${item.name} x${item.quantity} - ${formatPrice(itemTotal)}`;
+
+        let removeButton = document.createElement('button');
+        removeButton.textContent = 'Удалить';
+        removeButton.onclick = () => {
+            removeFromCart(id);
+        };
+        itemElement.appendChild(removeButton);
+
+        cartDisplay.appendChild(itemElement);
+        total += itemTotal;
+    }
+    let totalElement = document.createElement('div');
+    totalElement.textContent = `Итого: ${formatPrice(total)}`;
+    cartDisplay.appendChild(totalElement);
+}
+
+// Добавление товара в корзину
+function addToCart(id, name, price, quantity = 1) {
+    if (price < 1000) {
+        console.error(`Попытка добавить товар с некорректной ценой: ${price}. Операция отменена.`);
+        return;
+    }
+    if (cart[id]) {
+        cart[id].quantity += quantity;
+    } else {
+        cart[id] = { name, price, quantity };
+    }
+    updateCartDisplay();
+    updateMainButton();
+    saveCartToLocalStorage();
+}
+
+// Удаление товара из корзины
+function removeFromCart(id) {
+    if (cart[id]) {
+        if (cart[id].quantity > 1) {
+            cart[id].quantity--;
+        } else {
+            delete cart[id];
+        }
+        updateCartDisplay();
+        updateMainButton();
+        saveCartToLocalStorage();
+    }
+}
+
+// Отправка заказа в Google Sheets через Google Apps Script
+function placeOrder() {
+    const orderItems = [];
+    for (let id in cart) {
+        let item = cart[id];
+        orderItems.push({
+            name: item.name,
+            quantity: item.quantity,
+            price: item.price,
+            total: item.price * item.quantity
+        });
+    }
+
+    if (orderItems.length === 0) {
+        tg.showAlert('Корзина пуста. Добавьте товары перед заказом.');
+        return;
+    }
+
+    const total = orderItems.reduce((sum, item) => sum + item.total, 0);
+
+    const orderData = {
+        order: orderItems,
+        total: total,
+        timestamp: new Date().toISOString()
+    };
+
+    // Замените URL на ваш URL развернутого Google Apps Script
+    const googleScriptURL = "https://script.google.com/macros/s/YOUR_GOOGLE_APPS_SCRIPT_ID/exec";
+
+    tg.showPopup({
+        title: 'Оформление заказа',
+        message: 'Пожалуйста, подождите...'
+    });
+
+    fetch(googleScriptURL, {
+        method: 'POST',
+        mode: 'cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(orderData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            tg.showAlert('Заказ успешно отправлен!');
+            cart = {};
+            saveCartToLocalStorage();
+            updateCartDisplay();
+            updateMainButton();
+        } else {
+            tg.showAlert('Ошибка при отправке заказа: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Ошибка при отправке заказа:', error);
+        tg.showAlert('Ошибка при отправке заказа. Попробуйте позже.');
+    });
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    if (window.Telegram && window.Telegram.WebApp) {
+        tg = Telegram.WebApp;
+        tg.expand();
+        tg.MainButton.textColor = '#FFFFFF';
+        tg.MainButton.color = '#2cab37';
+
+        loadCartFromLocalStorage();
+
+        const fillingPrices = {
+            'chicken': 25000,
+            'beef': 40000,
+            'shrimp': 40000,
+            'falafel': 25000
+        };
+
+        let selectedFilling = 'chicken';
+
+        // Обновление цены шаурмы при выборе начинки
+        function updateShawarmaPrice() {
+            const priceElement = document.getElementById('shawarma-price');
+            priceElement.textContent = formatPrice(fillingPrices[selectedFilling]);
+        }
+
+        // Обработчик выбора начинки
+        document.querySelectorAll('.filling-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.filling-btn').forEach(b => b.classList.remove('selected'));
+                this.classList.add('selected');
+                selectedFilling = this.dataset.filling;
+                updateShawarmaPrice();
+            });
+        });
+
+        // Обработчик добавления шаурмы
+        document.getElementById('btn-shawarma').addEventListener('click', function() {
+            const fillingBtn = document.querySelector('.filling-btn.selected');
+            if (!fillingBtn) {
+                tg.showAlert('Пожалуйста, выберите начинку для шаурмы');
+                return;
+            }
+            const fillingId = fillingBtn.dataset.filling;
+            const price = fillingPrices[fillingId];
+            const id = `shawarma_${fillingId}`;
+            const name = `Шаурма (${fillingBtn.textContent.trim()})`;
+            addToCart(id, name, price, 1);
+        });
+
+        // Обработчик добавления остальных товаров
+        document.querySelectorAll('.btn:not(#btn-shawarma)').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const id = this.id;
+                const nameElement = this.parentElement.querySelector('h3');
+                const priceElement = this.parentElement.querySelector('.price');
+                if (!nameElement || !priceElement) return;
+
+                const name = nameElement.textContent;
+                // Извлекаем цену — только цифры, без "k" и текста
+                const price = parseInt(priceElement.textContent.replace(/\D/g, ''));
+                addToCart(id, name, price);
+            });
+        });
+
+        // Кнопка показа/скрытия корзины
+        const showCartBtn = document.getElementById('showCartBtn');
+        const cartDisplay = document.getElementById('cartDisplay');
+        showCartBtn.addEventListener('click', function() {
+            if (cartDisplay.style.display === 'none' || cartDisplay.style.display === '') {
+                updateCartDisplay();
+                cartDisplay.style.display = 'block';
+            } else {
+                cartDisplay.style.display = 'none';
+            }
+        });
+
+        tg.MainButton.onClick(placeOrder);
+
+        updateShawarmaPrice();
+    } else {
+        console.error('Telegram WebApp API не найден');
+    }
+});
