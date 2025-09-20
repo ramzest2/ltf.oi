@@ -166,7 +166,7 @@ sendOrderBtn.onclick = () => {
 
     console.log('Отправка заказа:', payload);
 
-    fetch('https://script.google.com/macros/s/1GIM3C3NKW17tbP3clmNkUgQQ3kW_ByJjDUos__fsYCk/exec', {
+    fetch('https://script.google.com/macros/s/AKfycbzXNvBsxyPIGtanfB2_I2PxvKbd-lvs86mH-26rVI6GzVXUhtMzgzpJQP4nRGHV9Ss/exec', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
