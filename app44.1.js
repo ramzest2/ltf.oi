@@ -147,7 +147,7 @@ sendOrderBtn.onclick = () => {
         timestamp: new Date().toISOString(),
     };
 
-    fetch('https://script.google.com/macros/s/1GIM3C3NKW17tbP3clmNkUgQQ3kW_ByJjDUos__fsYCk/exec', {
+    fetch('https://script.google.com/macros/s//exec', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
