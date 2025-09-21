@@ -7,7 +7,6 @@ const fillingPrices = {
 
 let selectedFilling = 'chicken';
 let cart = {};
-
 const shawarmaPriceEl = document.getElementById('shawarma-price');
 const cartDisplay = document.getElementById('cartDisplay');
 const showCartBtn = document.getElementById('showCartBtn');
