@@ -2,7 +2,6 @@ require('dotenv').config();
 
 const CLIENT_ID = process.env.CLIENT_ID;
 const SCRIPT_ID = process.env.SCRIPT_ID;
-
 const fillingPrices = {
   chicken: 25000,
   beef: 40000,
