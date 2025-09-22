@@ -1,7 +1,6 @@
-require('dotenv').config();
+const CLIENT_ID='175874289746-tblhoqj20e7oa7qktjus6rqcqsi6h2df.apps.googleusercontent.com'
+const SCRIPT_ID='1FeIuRn9y0NuUhO0rTp4QE0sedfDv6LKse87ItFOPl8-LnjPnFA1yS-w2'
 
-const CLIENT_ID = process.env.CLIENT_ID;
-const SCRIPT_ID = process.env.SCRIPT_ID;
 const fillingPrices = {
   chicken: 25000,
   beef: 40000,
